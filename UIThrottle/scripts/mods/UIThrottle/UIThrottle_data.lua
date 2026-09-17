@@ -104,22 +104,6 @@ return {
 					},
 				},
 			},
-			{
-				setting_id = "group_mod_sleep",
-				type = "group",
-				sub_widgets = {
-					{
-						setting_id = "sleep_hidden_panels",
-						type = "checkbox",
-						default_value = true,
-					},
-					{
-						setting_id = "sleep_all_hidden_elements",
-						type = "checkbox",
-						default_value = true,
-					},
-				},
-			},
 		},
 	},
 }

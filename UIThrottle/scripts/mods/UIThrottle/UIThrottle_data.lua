@@ -7,66 +7,100 @@ return {
 	options = {
 		widgets = {
 			{
-				setting_id = "general_settings",
+				setting_id = "group_general",
 				type = "group",
-				tab = mod:localize("tab_general"),
 				sub_widgets = {
 					{
 						setting_id = "enable_hud_throttle",
 						type = "checkbox",
 						default_value = true,
-					},
-					{
-						setting_id = "general_hud_fps",
-						type = "numeric",
-						default_value = 30,
-						range = { 0, 60 },
-						decimals_number = 0,
-						step_size_value = 1,
+						sub_widgets = {
+							{
+								setting_id = "general_hud_fps",
+								type = "numeric",
+								default_value = 30,
+								range = { 0, 60 },
+								decimals_number = 0,
+								step_size_value = 1,
+							},
+						},
 					},
 					{
 						setting_id = "override_world_markers",
 						type = "checkbox",
 						default_value = true,
-					},
-					{
-						setting_id = "world_markers_fps",
-						type = "numeric",
-						default_value = 60,
-						range = { 0, 120 },
-						decimals_number = 0,
-						step_size_value = 1,
-					},
-					{
-						setting_id = "override_team_panels",
-						type = "checkbox",
-						default_value = true,
-					},
-					{
-						setting_id = "team_panels_fps",
-						type = "numeric",
-						default_value = 15,
-						range = { 0, 60 },
-						decimals_number = 0,
-						step_size_value = 1,
-					},
-					{
-						setting_id = "override_hud_studio",
-						type = "checkbox",
-						default_value = true,
-					},
-					{
-						setting_id = "hud_studio_fps",
-						type = "numeric",
-						default_value = 30,
-						range = { 0, 60 },
-						decimals_number = 0,
-						step_size_value = 1,
+						sub_widgets = {
+							{
+								setting_id = "world_markers_fps",
+								type = "numeric",
+								default_value = 60,
+								range = { 0, 120 },
+								decimals_number = 0,
+								step_size_value = 1,
+							},
+						},
 					},
 					{
 						setting_id = "show_tick_echo",
 						type = "checkbox",
 						default_value = false,
+					},
+				},
+			},
+			{
+				setting_id = "group_team",
+				type = "group",
+				sub_widgets = {
+					{
+						setting_id = "override_personal_player_panel",
+						type = "checkbox",
+						default_value = true,
+						sub_widgets = {
+							{
+								setting_id = "personal_player_panel_fps",
+								type = "numeric",
+								default_value = 30,
+								range = { 0, 60 },
+								decimals_number = 0,
+								step_size_value = 1,
+							},
+						},
+					},
+					{
+						setting_id = "override_team_panels",
+						type = "checkbox",
+						default_value = true,
+						sub_widgets = {
+							{
+								setting_id = "team_panels_fps",
+								type = "numeric",
+								default_value = 15,
+								range = { 0, 60 },
+								decimals_number = 0,
+								step_size_value = 1,
+							},
+						},
+					},
+				},
+			},
+			{
+				setting_id = "group_hud_studio",
+				type = "group",
+				sub_widgets = {
+					{
+						setting_id = "override_hud_studio",
+						type = "checkbox",
+						default_value = true,
+						sub_widgets = {
+							{
+								setting_id = "hud_studio_fps",
+								type = "numeric",
+								default_value = 30,
+								range = { 0, 60 },
+								decimals_number = 0,
+								step_size_value = 1,
+							},
+						},
 					},
 				},
 			},

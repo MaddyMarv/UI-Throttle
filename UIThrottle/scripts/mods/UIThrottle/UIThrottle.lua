@@ -9,6 +9,73 @@ local hud_studio_ticks = 0
 local world_markers_timer = 0
 local hud_canvas_hooked = false
 
+local function is_panel_hidden(panel, data)
+	if not panel then
+		return false
+	end
+
+	local custom_hud = rawget(_G, "get_mod") and get_mod("custom_hud")
+	if custom_hud and custom_hud:is_enabled() and panel._is_hidden then
+		return true
+	end
+
+	local hud_studio = rawget(_G, "get_mod") and get_mod("hud_studio")
+	if hud_studio and hud_studio:is_enabled() and not hud_studio.hud_studio_editor_active then
+		local session = hud_studio.hud_studio_session and hud_studio:core(hud_studio.hud_studio_session, "document/session")
+		local canvas = session and session.canvas and session.canvas()
+		local vanilla = canvas and canvas.vanilla
+		if vanilla then
+			local scenegraph_id = (data and data.scenegraph_id) or (panel._data and panel._data.scenegraph_id)
+			local id_map = {
+				local_player = "player_1",
+				player_1 = "player_2",
+				player_2 = "player_3",
+				player_3 = "player_4",
+			}
+			local slot_id = scenegraph_id and id_map[scenegraph_id]
+			if slot_id and vanilla[slot_id] == false then
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
+local function is_element_hidden(element)
+	if not element then
+		return false
+	end
+
+	local custom_hud = rawget(_G, "get_mod") and get_mod("custom_hud")
+	if custom_hud and custom_hud:is_enabled() and element._is_hidden then
+		return true
+	end
+
+	local hud_studio = rawget(_G, "get_mod") and get_mod("hud_studio")
+	if hud_studio and hud_studio:is_enabled() and not hud_studio.hud_studio_editor_active then
+		local session = hud_studio.hud_studio_session and hud_studio:core(hud_studio.hud_studio_session, "document/session")
+		local canvas = session and session.canvas and session.canvas()
+		local vanilla = canvas and canvas.vanilla
+		if vanilla then
+			local class_name = element.__class_name
+			local map = {
+				HudElementStamina = "dodge_stamina",
+				HudElementDodgeCounter = "dodge_stamina",
+				HudElementOvercharge = "peril",
+				HudElementPlayerAbilityHandler = "ability",
+				HudElementPlayerWeaponHandler = "equipment",
+			}
+			local toggle_id = map[class_name]
+			if toggle_id and vanilla[toggle_id] == false then
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
 mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
 	if not mod:is_enabled() or not mod:get("enable_hud_throttle") then
 		return func(self, dt, t, input_service)
@@ -30,7 +97,32 @@ mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
 			mod:echo(string.format("{#color(100,255,100)}[HUD TICK #%d] (%.1fs){#reset()}", entire_hud_ticks, update_interval))
 		end
 
+		local elements_array = self._elements_array
+		local currently_visible_elements = self._currently_visible_elements
+		local saved_visibility = nil
+
+		if mod:get("sleep_all_hidden_elements") and elements_array and currently_visible_elements then
+			for i = 1, #elements_array do
+				local elem = elements_array[i]
+				if is_element_hidden(elem) then
+					local elem_name = elem.__class_name
+					if currently_visible_elements[elem_name] then
+						saved_visibility = saved_visibility or {}
+						saved_visibility[elem_name] = true
+						currently_visible_elements[elem_name] = false
+					end
+				end
+			end
+		end
+
 		func(self, general_hud_timer, t, input_service)
+
+		if saved_visibility then
+			for elem_name in pairs(saved_visibility) do
+				currently_visible_elements[elem_name] = true
+			end
+		end
+
 		general_hud_timer = 0
 		world_markers_timer = 0
 	else
@@ -111,8 +203,9 @@ mod:hook("HudElementTeamPanelHandler", "update", function(func, self, dt, t, ui_
 
 	local override_team = mod:get("override_team_panels")
 	local override_personal = mod:get("override_personal_player_panel")
+	local sleep_hidden = mod:get("sleep_hidden_panels")
 
-	if not override_team and not override_personal then
+	if not override_team and not override_personal and not sleep_hidden then
 		return func(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
@@ -140,17 +233,20 @@ mod:hook("HudElementTeamPanelHandler", "update", function(func, self, dt, t, ui_
 		local data = player_panels_array[i]
 		local panel = data.panel
 		if panel and panel.update then
-			if data.is_my_player then
-				if update_personal then
-					panel:update(personal_panel_timer, t, ui_renderer, render_settings, input_service)
-				elseif base_class and base_class.update then
-					base_class.update(panel, dt, t, ui_renderer, render_settings, input_service)
-				end
-			else
-				if update_team then
-					panel:update(team_panels_timer, t, ui_renderer, render_settings, input_service)
-				elseif base_class and base_class.update then
-					base_class.update(panel, dt, t, ui_renderer, render_settings, input_service)
+			local is_hidden = sleep_hidden and is_panel_hidden(panel, data)
+			if not is_hidden then
+				if data.is_my_player then
+					if update_personal then
+						panel:update(personal_panel_timer, t, ui_renderer, render_settings, input_service)
+					elseif base_class and base_class.update then
+						base_class.update(panel, dt, t, ui_renderer, render_settings, input_service)
+					end
+				else
+					if update_team then
+						panel:update(team_panels_timer, t, ui_renderer, render_settings, input_service)
+					elseif base_class and base_class.update then
+						base_class.update(panel, dt, t, ui_renderer, render_settings, input_service)
+					end
 				end
 			end
 		end

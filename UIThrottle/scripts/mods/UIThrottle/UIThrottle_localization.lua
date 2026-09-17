@@ -49,4 +49,13 @@ return {
 	hud_studio_fps = {
 		en = "HUD Studio Target FPS",
 	},
+	group_mod_sleep = {
+		en = "Modded Auto-Sleep (Custom HUD & HUD Studio)",
+	},
+	sleep_hidden_panels = {
+		en = "Auto-Sleep Hidden Player Panels",
+	},
+	sleep_all_hidden_elements = {
+		en = "Auto-Sleep All Hidden Elements",
+	},
 }

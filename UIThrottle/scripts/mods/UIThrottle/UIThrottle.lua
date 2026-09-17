@@ -14,6 +14,10 @@ mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
 	end
 
 	local target_fps = mod:get("general_hud_fps") or 30
+	if target_fps <= 0 then
+		return func(self, dt, t, input_service)
+	end
+
 	local update_interval = 1 / target_fps
 
 	general_hud_timer = general_hud_timer + dt
@@ -31,9 +35,9 @@ mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
 	else
 		if mod:get("override_world_markers") then
 			local wm_fps = mod:get("world_markers_fps") or 60
-			local wm_interval = 1 / wm_fps
+			local wm_interval = wm_fps > 0 and (1 / wm_fps) or 0
 
-			if world_markers_timer >= wm_interval then
+			if wm_interval <= 0 or world_markers_timer >= wm_interval then
 				local ui_renderer = self._ui_renderer
 				local render_settings = self._render_settings
 				local visible_elements = self._currently_visible_elements
@@ -104,7 +108,11 @@ mod:hook("HudElementTeamPanelHandler", "update", function(func, self, dt, t, ui_
 		return func(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
-	local target_fps = mod:get("team_panels_fps") or 1
+	local target_fps = mod:get("team_panels_fps") or 15
+	if target_fps <= 0 then
+		return func(self, dt, t, ui_renderer, render_settings, input_service)
+	end
+
 	local update_interval = 1 / target_fps
 
 	team_panels_timer = team_panels_timer + dt
@@ -136,6 +144,10 @@ local function hook_hud_canvas()
 			end
 
 			local target_fps = mod:get("hud_studio_fps") or 30
+			if target_fps <= 0 then
+				return func(self, dt, t, ui_renderer, render_settings, input_service)
+			end
+
 			local update_interval = 1 / target_fps
 
 			hud_studio_timer = hud_studio_timer + dt

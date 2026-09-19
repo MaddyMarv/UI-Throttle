@@ -26,6 +26,20 @@ return {
 						},
 					},
 					{
+						setting_id = "bypass_in_menus",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "toggle_throttle_key",
+						type = "keybind",
+						default_value = {},
+						keybind_global = true,
+						keybind_trigger = "pressed",
+						keybind_type = "function_call",
+						function_name = "toggle_throttle",
+					},
+					{
 						setting_id = "override_world_markers",
 						type = "checkbox",
 						default_value = true,

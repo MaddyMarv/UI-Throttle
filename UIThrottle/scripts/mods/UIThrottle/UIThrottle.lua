@@ -9,13 +9,87 @@ local hud_studio_ticks = 0
 local world_markers_timer = 0
 local hud_canvas_hooked = false
 
+mod._throttle_disabled = false
+
+local function reset_timers()
+	general_hud_timer = 0
+	world_markers_timer = 0
+	team_panels_timer = 0
+	personal_panel_timer = 0
+	hud_studio_timer = 0
+end
+
+local function should_bypass_throttling(hud)
+	if mod._throttle_disabled then
+		return true
+	end
+
+	local hud_studio = rawget(_G, "get_mod") and get_mod("hud_studio")
+	if hud_studio and hud_studio.hud_studio_editor_active then
+		return true
+	end
+
+	if not mod:get("bypass_in_menus") then
+		return false
+	end
+
+	local input_manager = rawget(_G, "Managers") and Managers.input
+	if input_manager and input_manager.cursor_active and input_manager:cursor_active() then
+		return true
+	end
+
+	local ui_manager = rawget(_G, "Managers") and Managers.ui
+	if ui_manager then
+		if ui_manager.has_active_view and ui_manager:has_active_view() then
+			return true
+		end
+		if ui_manager.using_input and ui_manager:using_input() then
+			return true
+		end
+		if ui_manager.chat_using_input and ui_manager:chat_using_input() then
+			return true
+		end
+	end
+
+	if hud and hud.using_input and hud:using_input() then
+		return true
+	end
+
+	return false
+end
+
+mod.toggle_throttle = function()
+	mod._throttle_disabled = not mod._throttle_disabled
+	if mod._throttle_disabled then
+		mod:echo(mod:localize("msg_throttle_disabled"))
+	else
+		mod:echo(mod:localize("msg_throttle_enabled"))
+	end
+end
+
+mod.on_enabled = function()
+	reset_timers()
+end
+
+mod.on_disabled = function()
+	reset_timers()
+end
+
+mod.on_setting_changed = function(setting_id)
+	reset_timers()
+end
+
 mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
-	if not mod:is_enabled() or not mod:get("enable_hud_throttle") then
+	if not mod:is_enabled() or not mod:get("enable_hud_throttle") or should_bypass_throttling(self) then
+		general_hud_timer = 0
+		world_markers_timer = 0
 		return func(self, dt, t, input_service)
 	end
 
 	local target_fps = mod:get("general_hud_fps") or 30
 	if target_fps <= 0 then
+		general_hud_timer = 0
+		world_markers_timer = 0
 		return func(self, dt, t, input_service)
 	end
 
@@ -105,7 +179,9 @@ mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
 end)
 
 mod:hook("HudElementTeamPanelHandler", "update", function(func, self, dt, t, ui_renderer, render_settings, input_service)
-	if not mod:is_enabled() then
+	if not mod:is_enabled() or not mod:get("enable_hud_throttle") or should_bypass_throttling() then
+		team_panels_timer = 0
+		personal_panel_timer = 0
 		return func(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
@@ -173,17 +249,14 @@ local function hook_hud_canvas()
 	if hud_canvas then
 		hud_canvas_hooked = true
 		mod:hook(hud_canvas, "update", function(func, self, dt, t, ui_renderer, render_settings, input_service)
-			if not mod:is_enabled() or not mod:get("override_hud_studio") then
-				return func(self, dt, t, ui_renderer, render_settings, input_service)
-			end
-
-			local hud_studio = rawget(_G, "get_mod") and get_mod("hud_studio")
-			if hud_studio and hud_studio.hud_studio_editor_active then
+			if not mod:is_enabled() or not mod:get("enable_hud_throttle") or not mod:get("override_hud_studio") or should_bypass_throttling() then
+				hud_studio_timer = 0
 				return func(self, dt, t, ui_renderer, render_settings, input_service)
 			end
 
 			local target_fps = mod:get("hud_studio_fps") or 30
 			if target_fps <= 0 then
+				hud_studio_timer = 0
 				return func(self, dt, t, ui_renderer, render_settings, input_service)
 			end
 

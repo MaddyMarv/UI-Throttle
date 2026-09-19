@@ -25,6 +25,24 @@ return {
 	show_tick_echo = {
 		en = "Show On-Screen Tick Indicator",
 	},
+	bypass_in_menus = {
+		en = "Bypass in Menus & When Cursor Active",
+	},
+	bypass_in_menus_description = {
+		en = "Automatically suspends UI throttling while menus, views, editors (like HUD Studio), or the mouse cursor are active so grabbing, dragging, and navigation remain smooth.",
+	},
+	toggle_throttle_key = {
+		en = "Toggle Throttling Keybind",
+	},
+	toggle_throttle_key_description = {
+		en = "Keybind to quickly enable or disable all UI throttling.",
+	},
+	msg_throttle_disabled = {
+		en = "{#color(255,100,100)}[UI Throttle] Throttling disabled{#reset()}",
+	},
+	msg_throttle_enabled = {
+		en = "{#color(100,255,100)}[UI Throttle] Throttling enabled{#reset()}",
+	},
 	group_team = {
 		en = "Team & Personal Panels",
 	},

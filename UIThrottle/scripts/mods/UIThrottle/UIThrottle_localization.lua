@@ -5,66 +5,78 @@ return {
 		en = "UI Throttle",
 	},
 	mod_description = {
-		en = "Throttles UI update rates to test CPU overhead reduction.",
+		en = "Reduces CPU overhead by throttling UI update rates with debt-accumulating pacing and round-robin teammate panel staggering.",
 	},
-	group_general = {
-		en = "General Settings",
+	tab_rates = {
+		en = "Frame Rates",
 	},
-	enable_hud_throttle = {
-		en = "Enable General HUD Throttle",
+	group_rates = {
+		en = "Target Frame Rates",
 	},
 	general_hud_fps = {
-		en = "General HUD Target FPS",
+		en = "General HUD Rate (FPS)",
 	},
-	override_world_markers = {
-		en = "Override: World Markers",
+	general_hud_fps_description = {
+		en = "Target update rate for crosshair, tactical overlay, and general HUD elements.",
+	},
+	player_buffs_fps = {
+		en = "Player Buffs Rate (FPS)",
+	},
+	player_buffs_fps_description = {
+		en = "Target update rate for player buff icons and duration rings. Buffs eat significant CPU during combat; reducing this to 10 FPS dramatically lowers overhead.",
+	},
+	team_panels_fps = {
+		en = "Teammate Panels Rate (FPS)",
+	},
+	team_panels_fps_description = {
+		en = "Target update rate for teammate health, toughness, and ammo panels.",
+	},
+	stagger_team_panels = {
+		en = "Stagger Teammate Updates",
+	},
+	stagger_team_panels_description = {
+		en = "Updates only one teammate panel per tick in round-robin order, distributing CPU work across frames and eliminating frametime spikes.",
+	},
+	personal_player_panel_fps = {
+		en = "Personal Panel Rate (FPS)",
+	},
+	personal_player_panel_fps_description = {
+		en = "Target update rate for your own player panel in the bottom-left.",
 	},
 	world_markers_fps = {
-		en = "World Markers Target FPS",
+		en = "World Markers & Nameplates Rate (FPS)",
 	},
-	show_tick_echo = {
-		en = "Show On-Screen Tick Indicator",
+	world_markers_fps_description = {
+		en = "Target update rate for 3D world markers and player nameplates so camera panning remains smooth.",
+	},
+	tab_general = {
+		en = "General",
+	},
+	group_general = {
+		en = "General & Controls",
 	},
 	bypass_in_menus = {
-		en = "Bypass in Menus & When Cursor Active",
+		en = "Bypass in Menus & Cursor",
 	},
 	bypass_in_menus_description = {
-		en = "Automatically suspends UI throttling while menus, views, editors (like HUD Studio), or the mouse cursor are active so grabbing, dragging, and navigation remain smooth.",
+		en = "Temporarily disables UI throttling while menus, views, inventory, or the mouse cursor are active.",
 	},
 	toggle_throttle_key = {
-		en = "Toggle Throttling Keybind",
+		en = "Toggle Throttling Hotkey",
 	},
 	toggle_throttle_key_description = {
-		en = "Keybind to quickly enable or disable all UI throttling.",
+		en = "Keybind to quickly toggle all UI throttling on or off.",
+	},
+	show_tick_echo = {
+		en = "Show Debug Tick Indicator",
+	},
+	show_tick_echo_description = {
+		en = "Prints HUD tick updates and elapsed frame timings to chat for performance testing.",
 	},
 	msg_throttle_disabled = {
 		en = "{#color(255,100,100)}[UI Throttle] Throttling disabled{#reset()}",
 	},
 	msg_throttle_enabled = {
 		en = "{#color(100,255,100)}[UI Throttle] Throttling enabled{#reset()}",
-	},
-	group_team = {
-		en = "Team & Personal Panels",
-	},
-	override_personal_player_panel = {
-		en = "Override: Personal Player Panel",
-	},
-	personal_player_panel_fps = {
-		en = "Personal Player Panel Target FPS",
-	},
-	override_team_panels = {
-		en = "Override: Teammate Panels",
-	},
-	team_panels_fps = {
-		en = "Teammate Panels Target FPS",
-	},
-	group_hud_studio = {
-		en = "HUD Studio",
-	},
-	override_hud_studio = {
-		en = "Override: HUD Studio",
-	},
-	hud_studio_fps = {
-		en = "HUD Studio Target FPS",
 	},
 }

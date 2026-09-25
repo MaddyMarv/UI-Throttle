@@ -1,22 +1,58 @@
 local mod = get_mod("UIThrottle")
 
-local general_hud_timer = 0
+local TOLERANCE = 0.9
+
+local function pacing_new()
+	return { debt = 0, elapsed = 0 }
+end
+
+local function pacing_reset(timer)
+	timer.debt = 0
+	timer.elapsed = 0
+end
+
+local function pacing_due(timer, dt, fps)
+	local elapsed = timer.elapsed + dt
+	if fps <= 0 then
+		timer.debt = 0
+		timer.elapsed = 0
+		return true, elapsed
+	end
+	local interval = 1 / fps
+	local debt = timer.debt + dt
+	if debt < interval * TOLERANCE then
+		timer.debt = debt
+		timer.elapsed = elapsed
+		return false, 0
+	end
+	debt = debt - interval
+	if debt > interval then
+		debt = interval
+	elseif debt < 0 then
+		debt = 0
+	end
+	timer.debt = debt
+	timer.elapsed = 0
+	return true, elapsed
+end
+
+local hud_timer = pacing_new()
+local world_markers_timer = pacing_new()
+local team_panels_timer = pacing_new()
+local personal_panel_timer = pacing_new()
+
 local entire_hud_ticks = 0
-local team_panels_timer = 0
-local personal_panel_timer = 0
-local hud_studio_timer = 0
-local hud_studio_ticks = 0
-local world_markers_timer = 0
-local hud_canvas_hooked = false
+
+local team_robin_index = 0
 
 mod._throttle_disabled = false
 
 local function reset_timers()
-	general_hud_timer = 0
-	world_markers_timer = 0
-	team_panels_timer = 0
-	personal_panel_timer = 0
-	hud_studio_timer = 0
+	pacing_reset(hud_timer)
+	pacing_reset(world_markers_timer)
+	pacing_reset(team_panels_timer)
+	pacing_reset(personal_panel_timer)
+	team_robin_index = 0
 end
 
 local function should_bypass_throttling(hud)
@@ -80,39 +116,38 @@ mod.on_setting_changed = function(setting_id)
 end
 
 mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
-	if not mod:is_enabled() or not mod:get("enable_hud_throttle") or should_bypass_throttling(self) then
-		general_hud_timer = 0
-		world_markers_timer = 0
+	if not mod:is_enabled() or should_bypass_throttling(self) then
+		pacing_reset(hud_timer)
+		pacing_reset(world_markers_timer)
 		return func(self, dt, t, input_service)
 	end
 
 	local target_fps = mod:get("general_hud_fps") or 30
 	if target_fps <= 0 then
-		general_hud_timer = 0
-		world_markers_timer = 0
+		pacing_reset(hud_timer)
+		pacing_reset(world_markers_timer)
 		return func(self, dt, t, input_service)
 	end
 
-	local update_interval = 1 / target_fps
+	local due, elapsed = pacing_due(hud_timer, dt, target_fps)
 
-	general_hud_timer = general_hud_timer + dt
-	world_markers_timer = world_markers_timer + dt
+	world_markers_timer.elapsed = world_markers_timer.elapsed + dt
+	world_markers_timer.debt = world_markers_timer.debt + dt
 
-	if general_hud_timer >= update_interval then
+	if due then
 		entire_hud_ticks = entire_hud_ticks + 1
 		if mod:get("show_tick_echo") then
-			mod:echo(string.format("{#color(100,255,100)}[HUD TICK #%d] (%.1fs){#reset()}", entire_hud_ticks, update_interval))
+			mod:echo(string.format("{#color(100,255,100)}[HUD TICK #%d] (%.1fms){#reset()}", entire_hud_ticks, elapsed * 1000))
 		end
 
-		func(self, general_hud_timer, t, input_service)
-		general_hud_timer = 0
-		world_markers_timer = 0
+		func(self, elapsed, t, input_service)
+		pacing_reset(world_markers_timer)
 	else
-		if mod:get("override_world_markers") then
-			local wm_fps = mod:get("world_markers_fps") or 60
-			local wm_interval = wm_fps > 0 and (1 / wm_fps) or 0
+		local wm_fps = mod:get("world_markers_fps") or 60
+		if wm_fps > target_fps then
+			local wm_due, wm_elapsed = pacing_due(world_markers_timer, 0, wm_fps)
 
-			if wm_interval <= 0 or world_markers_timer >= wm_interval then
+			if wm_due then
 				local ui_renderer = self._ui_renderer
 				local render_settings = self._render_settings
 				local visible_elements = self._currently_visible_elements
@@ -137,7 +172,7 @@ mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
 							end
 						end
 
-						wm:update(world_markers_timer, t, ui_renderer, render_settings, input_service)
+						wm:update(wm_elapsed, t, ui_renderer, render_settings, input_service)
 
 						if applied_scale then
 							self:_abort_hud_scale()
@@ -160,7 +195,7 @@ mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
 							end
 						end
 
-						np:update(world_markers_timer, t, ui_renderer, render_settings, input_service)
+						np:update(wm_elapsed, t, ui_renderer, render_settings, input_service)
 
 						if applied_scale then
 							self:_abort_hud_scale()
@@ -171,24 +206,15 @@ mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
 						end
 					end
 				end
-
-				world_markers_timer = 0
 			end
 		end
 	end
 end)
 
 mod:hook("HudElementTeamPanelHandler", "update", function(func, self, dt, t, ui_renderer, render_settings, input_service)
-	if not mod:is_enabled() or not mod:get("enable_hud_throttle") or should_bypass_throttling() then
-		team_panels_timer = 0
-		personal_panel_timer = 0
-		return func(self, dt, t, ui_renderer, render_settings, input_service)
-	end
-
-	local override_team = mod:get("override_team_panels")
-	local override_personal = mod:get("override_personal_player_panel")
-
-	if not override_team and not override_personal then
+	if not mod:is_enabled() or should_bypass_throttling() then
+		pacing_reset(team_panels_timer)
+		pacing_reset(personal_panel_timer)
 		return func(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
@@ -200,91 +226,105 @@ mod:hook("HudElementTeamPanelHandler", "update", function(func, self, dt, t, ui_
 		return
 	end
 
-	local team_fps = mod:get("team_panels_fps") or 15
-	local team_interval = team_fps > 0 and (1 / team_fps) or 0
-	team_panels_timer = team_panels_timer + dt
-	local update_team = not override_team or team_interval <= 0 or team_panels_timer >= team_interval
-
 	local personal_fps = mod:get("personal_player_panel_fps") or 30
-	local personal_interval = personal_fps > 0 and (1 / personal_fps) or 0
-	personal_panel_timer = personal_panel_timer + dt
-	local update_personal = not override_personal or personal_interval <= 0 or personal_panel_timer >= personal_interval
+	local personal_due, personal_elapsed = pacing_due(personal_panel_timer, dt, personal_fps)
 
+	local team_fps = mod:get("team_panels_fps") or 15
+	local team_due, team_elapsed = pacing_due(team_panels_timer, dt, team_fps)
+
+	local stagger = mod:get("stagger_team_panels") ~= false
 	local base_class = rawget(_G, "CLASS") and CLASS.HudElementBase
+
+	local teammates = {}
+	local teammate_count = 0
 
 	for i = 1, #player_panels_array do
 		local data = player_panels_array[i]
 		local panel = data.panel
-		if panel and panel.update then
+		local player = data.player
+		if panel and panel.update and player and not player.__deleted then
 			if data.is_my_player then
-				if update_personal then
-					panel:update(personal_panel_timer, t, ui_renderer, render_settings, input_service)
+				if personal_due then
+					panel:update(personal_elapsed, t, ui_renderer, render_settings, input_service)
 				elseif base_class and base_class.update then
 					base_class.update(panel, dt, t, ui_renderer, render_settings, input_service)
 				end
 			else
-				if update_team then
-					panel:update(team_panels_timer, t, ui_renderer, render_settings, input_service)
-				elseif base_class and base_class.update then
-					base_class.update(panel, dt, t, ui_renderer, render_settings, input_service)
-				end
+				teammate_count = teammate_count + 1
+				teammates[teammate_count] = { data = data, panel = panel }
 			end
 		end
 	end
 
-	if update_personal then
-		personal_panel_timer = 0
-	end
-	if update_team then
-		team_panels_timer = 0
+	if team_due and teammate_count > 0 then
+		if stagger and teammate_count > 1 then
+			team_robin_index = (team_robin_index % teammate_count) + 1
+			local chosen = teammates[team_robin_index]
+			chosen.panel:update(team_elapsed, t, ui_renderer, render_settings, input_service)
+
+			if base_class and base_class.update then
+				for i = 1, teammate_count do
+					if i ~= team_robin_index then
+						base_class.update(teammates[i].panel, dt, t, ui_renderer, render_settings, input_service)
+					end
+				end
+			end
+		else
+			for i = 1, teammate_count do
+				teammates[i].panel:update(team_elapsed, t, ui_renderer, render_settings, input_service)
+			end
+		end
+	elseif teammate_count > 0 then
+		if base_class and base_class.update then
+			for i = 1, teammate_count do
+				base_class.update(teammates[i].panel, dt, t, ui_renderer, render_settings, input_service)
+			end
+		end
 	end
 end)
 
-local function hook_hud_canvas()
-	if hud_canvas_hooked then
-		return
+local function handle_buff_update(func, self, dt, t, ui_renderer, render_settings, input_service)
+	local timer = self._ui_throttle_timer
+	if not timer then
+		timer = pacing_new()
+		self._ui_throttle_timer = timer
 	end
 
-	local hud_canvas = rawget(_G, "CLASS") and CLASS.HudCanvas
-	if hud_canvas then
-		hud_canvas_hooked = true
-		mod:hook(hud_canvas, "update", function(func, self, dt, t, ui_renderer, render_settings, input_service)
-			if not mod:is_enabled() or not mod:get("enable_hud_throttle") or not mod:get("override_hud_studio") or should_bypass_throttling() then
-				hud_studio_timer = 0
-				return func(self, dt, t, ui_renderer, render_settings, input_service)
-			end
+	if not mod:is_enabled() or should_bypass_throttling() or not self._syncronized then
+		pacing_reset(timer)
+		return func(self, dt, t, ui_renderer, render_settings, input_service)
+	end
 
-			local target_fps = mod:get("hud_studio_fps") or 30
-			if target_fps <= 0 then
-				hud_studio_timer = 0
-				return func(self, dt, t, ui_renderer, render_settings, input_service)
-			end
+	local buffs_fps = mod:get("player_buffs_fps") or 10
+	if buffs_fps <= 0 or buffs_fps >= 60 then
+		pacing_reset(timer)
+		return func(self, dt, t, ui_renderer, render_settings, input_service)
+	end
 
-			local update_interval = 1 / target_fps
-
-			hud_studio_timer = hud_studio_timer + dt
-
-			if hud_studio_timer >= update_interval then
-				hud_studio_ticks = hud_studio_ticks + 1
-				if mod:get("show_tick_echo") then
-					mod:echo(string.format("{#color(255,100,100)}[HUD STUDIO TICK #%d] (%.1fs){#reset()}", hud_studio_ticks, update_interval))
-				end
-
-				func(self, hud_studio_timer, t, ui_renderer, render_settings, input_service)
-				hud_studio_timer = 0
-			else
-				hud_canvas.super.update(self, dt, t, ui_renderer, render_settings, input_service)
-			end
-		end)
+	local due, elapsed = pacing_due(timer, dt, buffs_fps)
+	if due then
+		return func(self, elapsed, t, ui_renderer, render_settings, input_service)
+	else
+		local base_class = rawget(_G, "CLASS") and CLASS.HudElementBase
+		if base_class and base_class.update then
+			return base_class.update(self, dt, t, ui_renderer, render_settings, input_service)
+		end
 	end
 end
 
-hook_hud_canvas()
+mod:hook("HudElementPlayerBuffs", "update", handle_buff_update)
+
+local buff_bar_hooked = false
+if rawget(_G, "HudElementBuffBar") or (rawget(_G, "CLASS") and CLASS.HudElementBuffBar) then
+	mod:hook("HudElementBuffBar", "update", handle_buff_update)
+	buff_bar_hooked = true
+end
 
 mod.on_all_mods_loaded = function()
-	hook_hud_canvas()
+	if not buff_bar_hooked and (rawget(_G, "HudElementBuffBar") or (rawget(_G, "CLASS") and CLASS.HudElementBuffBar)) then
+		mod:hook("HudElementBuffBar", "update", handle_buff_update)
+		buff_bar_hooked = true
+	end
 end
 
-mod:hook_safe("UIHud", "init", function(self)
-	hook_hud_canvas()
-end)
+

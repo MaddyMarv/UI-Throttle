@@ -5,7 +5,7 @@ return {
 		en = "UI Throttle",
 	},
 	mod_description = {
-		en = "Reduces CPU overhead by throttling UI update rates with debt-accumulating pacing and round-robin teammate panel staggering.",
+		en = "Reduces CPU overhead by throttling UI update rates with other features to reduce CPU load.",
 	},
 	tab_rates = {
 		en = "Frame Rates",
@@ -23,31 +23,31 @@ return {
 		en = "Player Buffs Rate (FPS)",
 	},
 	player_buffs_fps_description = {
-		en = "Target update rate for player buff icons and duration rings. Buffs eat significant CPU during combat; reducing this to 10 FPS dramatically lowers overhead.",
+		en = "Target update rate for player buff icons.",
 	},
 	team_panels_fps = {
 		en = "Teammate Panels Rate (FPS)",
 	},
 	team_panels_fps_description = {
-		en = "Target update rate for teammate health, toughness, and ammo panels.",
+		en = "Target update rate for teammate panels.",
 	},
 	stagger_team_panels = {
 		en = "Stagger Teammate Updates",
 	},
 	stagger_team_panels_description = {
-		en = "Updates only one teammate panel per tick in round-robin order, distributing CPU work across frames and eliminating frametime spikes.",
+		en = "Updates only one teammate panel per tick.",
 	},
 	personal_player_panel_fps = {
 		en = "Personal Panel Rate (FPS)",
 	},
 	personal_player_panel_fps_description = {
-		en = "Target update rate for your own player panel in the bottom-left.",
+		en = "Target update rate for your own player panel.",
 	},
 	world_markers_fps = {
 		en = "World Markers & Nameplates Rate (FPS)",
 	},
 	world_markers_fps_description = {
-		en = "Target update rate for 3D world markers and player nameplates so camera panning remains smooth.",
+		en = "Target update rate for world markers and player nameplates.",
 	},
 	tab_general = {
 		en = "General",

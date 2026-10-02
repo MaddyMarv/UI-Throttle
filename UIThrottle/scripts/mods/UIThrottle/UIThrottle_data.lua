@@ -7,6 +7,32 @@ return {
 	options = {
 		widgets = {
 			{
+				setting_id = "group_general",
+				type = "group",
+				tab = mod:localize("tab_general"),
+				sub_widgets = {
+					{
+						setting_id = "bypass_in_menus",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "toggle_throttle_key",
+						type = "keybind",
+						default_value = {},
+						keybind_global = true,
+						keybind_trigger = "pressed",
+						keybind_type = "function_call",
+						function_name = "toggle_throttle",
+					},
+					{
+						setting_id = "show_tick_echo",
+						type = "checkbox",
+						default_value = false,
+					},
+				},
+			},
+			{
 				setting_id = "group_rates",
 				type = "group",
 				tab = mod:localize("tab_rates"),
@@ -55,32 +81,6 @@ return {
 						range = { 15, 120 },
 						decimals_number = 0,
 						step_size_value = 1,
-					},
-				},
-			},
-			{
-				setting_id = "group_general",
-				type = "group",
-				tab = mod:localize("tab_general"),
-				sub_widgets = {
-					{
-						setting_id = "bypass_in_menus",
-						type = "checkbox",
-						default_value = true,
-					},
-					{
-						setting_id = "toggle_throttle_key",
-						type = "keybind",
-						default_value = {},
-						keybind_global = true,
-						keybind_trigger = "pressed",
-						keybind_type = "function_call",
-						function_name = "toggle_throttle",
-					},
-					{
-						setting_id = "show_tick_echo",
-						type = "checkbox",
-						default_value = false,
 					},
 				},
 			},

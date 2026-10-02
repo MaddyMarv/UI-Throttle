@@ -1,15 +1,13 @@
-### [UI Throttle](https://www.nexusmods.com/warhammer40kdarktide/mods/EXAMPLE)
-
 Reduces CPU overhead by throttling UI update rates with other features to reduce CPU load.
 
-**Options:**
+[b]Options:[/b]
 
-**General & Controls**
+[b]General & Controls[/b]
 - Bypass in Menus & Cursor
 - Toggle Throttling Hotkey (Hotkey)
 - Show Debug Tick Indicator
 
-**Frame Rates**
+[b]Frame Rates[/b]
 - General HUD Rate (FPS)
 - Player Buffs Rate (FPS)
 - Teammate Panels Rate (FPS)
@@ -17,4 +15,5 @@ Reduces CPU overhead by throttling UI update rates with other features to reduce
 - Personal Panel Rate (FPS)
 - World Markers & Nameplates Rate (FPS)
 
-🔗 **Links:** [Source Code](https://github.com/MaddyMarv/UIThrottle) | [Nexus Mods Profile](https://www.nexusmods.com/profile/indicabunny) | [Support Me on Ko-fi](https://ko-fi.com/indicabunny)
+[b]Links:[/b]
+[url=https://github.com/MaddyMarv/UIThrottle]Source Code[/url] | [url=https://www.nexusmods.com/profile/indicabunny]Nexus Mods Profile[/url] | [url=https://ko-fi.com/indicabunny]Support Me on Ko-fi[/url]

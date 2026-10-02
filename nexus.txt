@@ -16,4 +16,4 @@ Reduces CPU overhead by throttling UI update rates with other features to reduce
 - World Markers & Nameplates Rate (FPS)
 
 [b]Links:[/b]
-[url=https://github.com/MaddyMarv/UIThrottle]Source Code[/url] | [url=https://www.nexusmods.com/profile/indicabunny]Nexus Mods Profile[/url] | [url=https://ko-fi.com/indicabunny]Support Me on Ko-fi[/url]
+[url=https://github.com/MaddyMarv/UI-Throttle]Source Code[/url] | [url=https://www.nexusmods.com/profile/indicabunny]Nexus Mods Profile[/url] | [url=https://ko-fi.com/indicabunny]Support Me on Ko-fi[/url]

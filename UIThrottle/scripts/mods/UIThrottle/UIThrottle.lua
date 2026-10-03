@@ -174,7 +174,47 @@ local function make_element_throttle(fps_setting_id)
 	end
 end
 
-mod:hook("HudElementWorldMarkers", "update", make_element_throttle("world_markers_fps"))
+mod:hook("HudElementWorldMarkers", "update", function(func, self, dt, t, ui_renderer, render_settings, input_service)
+	local timer = self._ui_throttle_timer
+	if not timer then
+		timer = pacing_new()
+		self._ui_throttle_timer = timer
+		return func(self, dt, t, ui_renderer, render_settings, input_service)
+	end
+
+	if not mod:is_enabled() or should_bypass_throttling(t) then
+		pacing_reset(timer)
+		return func(self, dt, t, ui_renderer, render_settings, input_service)
+	end
+
+	local target_fps = settings.world_markers_fps or 60
+	if target_fps <= 0 then
+		pacing_reset(timer)
+		return func(self, dt, t, ui_renderer, render_settings, input_service)
+	end
+
+	local due, elapsed = pacing_due(timer, dt, target_fps)
+	if due then
+		return func(self, elapsed, t, ui_renderer, render_settings, input_service)
+	else
+		local markers = self._markers
+		if markers then
+			local alive_table = rawget(_G, "ALIVE")
+			for i = #markers, 1, -1 do
+				local marker = markers[i]
+				local unit = marker.unit
+				if marker.remove or (unit and alive_table and not alive_table[unit]) then
+					self:_unregister_marker(marker)
+				end
+			end
+		end
+
+		local super_class = self.super
+		if super_class and super_class.update then
+			return super_class.update(self, dt, t, ui_renderer, render_settings, input_service)
+		end
+	end
+end)
 
 mod:hook("HudElementNameplates", "update", function(func, self, dt, t)
 	local timer = self._ui_throttle_timer

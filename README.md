@@ -1,7 +1,7 @@
 ### [UI Throttle](https://www.nexusmods.com/warhammer40kdarktide/mods/1386)
 <img width="863" height="863" alt="image" src="https://github.com/user-attachments/assets/d33c89bb-b258-4f1a-8f04-d7491f04022c" />
 
-Reduces CPU overhead by throttling individual HUD element update rates without affecting input handling.
+Throttles UI update rates to improve CPU performance.
 
 **Options:**
 

@@ -1,4 +1,4 @@
-Reduces CPU overhead by throttling individual HUD element update rates without affecting input handling.
+Throttles UI update rates to improve CPU performance.
 
 [b]Options:[/b]
 

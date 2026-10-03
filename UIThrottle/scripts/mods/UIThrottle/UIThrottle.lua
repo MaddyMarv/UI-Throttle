@@ -1,5 +1,22 @@
 local mod = get_mod("UIThrottle")
 
+-- Add any HUD element class names here to run at 100% full frame rate (never throttled):
+local PROTECTED_ELEMENTS = {
+	"HudElementSmartTagging",
+	"HudElementCrosshair",
+	"HudElementDamageIndicator",
+	"HudElementPlayerWeaponHandler",
+	"HudElementWieldInfo",
+	"HudElementEmoteWheel",
+	"HudElementInteraction",
+}
+
+local protected_elements = {}
+for k, v in pairs(PROTECTED_ELEMENTS) do
+	if type(k) == "string" then protected_elements[k] = true end
+	if type(v) == "string" then protected_elements[v] = true end
+end
+
 local TOLERANCE = 0.9
 
 local function pacing_new(phase)
@@ -222,16 +239,6 @@ local hooked_elements = {
 	HudElementPlayerBuffs = true,
 	HudElementTeamPlayerPanel = true,
 	HudElementPersonalPlayerPanel = true,
-}
-
-local protected_elements = {
-	HudElementSmartTagging = true,
-	HudElementCrosshair = true,
-	HudElementDamageIndicator = true,
-	HudElementPlayerWeaponHandler = true,
-	HudElementWieldInfo = true,
-	HudElementEmoteWheel = true,
-	HudElementInteraction = true,
 }
 
 local function hook_buff_bars()

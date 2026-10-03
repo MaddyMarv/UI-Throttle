@@ -28,7 +28,22 @@ return {
 				},
 			},
 			{
-				setting_id = "group_rates",
+				setting_id = "group_general_hud",
+				type = "group",
+				tab = mod:localize("tab_rates"),
+				sub_widgets = {
+					{
+						setting_id = "general_hud_fps",
+						type = "numeric",
+						default_value = 30,
+						range = { 0, 60 },
+						decimals_number = 0,
+						step_size_value = 1,
+					},
+				},
+			},
+			{
+				setting_id = "group_player_team",
 				type = "group",
 				tab = mod:localize("tab_rates"),
 				sub_widgets = {
@@ -36,6 +51,14 @@ return {
 						setting_id = "player_buffs_fps",
 						type = "numeric",
 						default_value = 10,
+						range = { 0, 60 },
+						decimals_number = 0,
+						step_size_value = 1,
+					},
+					{
+						setting_id = "personal_player_panel_fps",
+						type = "numeric",
+						default_value = 30,
 						range = { 0, 60 },
 						decimals_number = 0,
 						step_size_value = 1,
@@ -53,14 +76,13 @@ return {
 						type = "checkbox",
 						default_value = true,
 					},
-					{
-						setting_id = "personal_player_panel_fps",
-						type = "numeric",
-						default_value = 30,
-						range = { 0, 60 },
-						decimals_number = 0,
-						step_size_value = 1,
-					},
+				},
+			},
+			{
+				setting_id = "group_world_feed",
+				type = "group",
+				tab = mod:localize("tab_rates"),
+				sub_widgets = {
 					{
 						setting_id = "world_markers_fps",
 						type = "numeric",
@@ -71,14 +93,6 @@ return {
 					},
 					{
 						setting_id = "combat_feed_fps",
-						type = "numeric",
-						default_value = 30,
-						range = { 0, 60 },
-						decimals_number = 0,
-						step_size_value = 1,
-					},
-					{
-						setting_id = "general_hud_fps",
 						type = "numeric",
 						default_value = 30,
 						range = { 0, 60 },

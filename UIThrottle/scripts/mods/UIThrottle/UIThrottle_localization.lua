@@ -34,20 +34,29 @@ return {
 	tab_rates = {
 		en = "Frame Rates",
 	},
-	group_rates = {
-		en = "Target Frame Rates",
+	group_general_hud = {
+		en = "General HUD",
 	},
 	general_hud_fps = {
-		en = "General HUD",
+		en = "General HUD Rate (FPS)",
 	},
 	general_hud_fps_description = {
 		en = "Target update rate for general and modded HUD elements (0 = off). Pings, crosshairs, and weapon inputs always stay at full monitor frame rate.",
+	},
+	group_player_team = {
+		en = "Player & Team",
 	},
 	player_buffs_fps = {
 		en = "Player Buffs Rate (FPS)",
 	},
 	player_buffs_fps_description = {
 		en = "Update rate for player buff icons and durations (0 = off).",
+	},
+	personal_player_panel_fps = {
+		en = "Personal Panel Rate (FPS)",
+	},
+	personal_player_panel_fps_description = {
+		en = "Target update rate for your own player panel (0 = off).",
 	},
 	team_panels_fps = {
 		en = "Teammate Panels Rate (FPS)",
@@ -61,11 +70,8 @@ return {
 	stagger_team_panels_description = {
 		en = "Offsets teammate updates across frames to spread CPU load.",
 	},
-	personal_player_panel_fps = {
-		en = "Personal Panel Rate (FPS)",
-	},
-	personal_player_panel_fps_description = {
-		en = "Target update rate for your own player panel (0 = off).",
+	group_world_feed = {
+		en = "World & Feed",
 	},
 	world_markers_fps = {
 		en = "World Markers & Nameplates Rate (FPS)",

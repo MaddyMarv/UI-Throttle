@@ -36,7 +36,7 @@ return {
 						setting_id = "player_buffs_fps",
 						type = "numeric",
 						default_value = 10,
-						range = { 0, 30 },
+						range = { 0, 60 },
 						decimals_number = 0,
 						step_size_value = 1,
 					},

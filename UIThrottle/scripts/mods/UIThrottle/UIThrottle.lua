@@ -37,15 +37,6 @@ local function pacing_due(timer, dt, fps)
 	return true, elapsed
 end
 
-local ui_filter_list = {}
-
-local buff_bar_elements = {
-	{ class_name = "HudElementPlayerBuffs" },
-	{ class_name = "HudElementBuffBar" },
-	{ class_name = "HudElementBBMBuffBar", mod_name = "better_buff_management" },
-	{ class_name = "HudElementSbfBuffBar", mod_name = "SimpleBuffFilter" },
-}
-
 mod._throttle_disabled = false
 
 local function should_bypass_throttling(hud)
@@ -103,6 +94,7 @@ local function make_element_throttle(fps_setting_id_or_number)
 		if not timer then
 			timer = pacing_new()
 			self._ui_throttle_timer = timer
+			return func(self, dt, t, ui_renderer, render_settings, input_service)
 		end
 
 		if not mod:is_enabled() or should_bypass_throttling() then
@@ -123,16 +115,10 @@ local function make_element_throttle(fps_setting_id_or_number)
 			local super_class = self.super
 			if super_class and super_class.update then
 				return super_class.update(self, dt, t, ui_renderer, render_settings, input_service)
-			else
-				local base_class = rawget(_G, "CLASS") and CLASS.HudElementBase
-				if base_class and base_class.update then
-					return base_class.update(self, dt, t, ui_renderer, render_settings, input_service)
-				end
 			end
 		end
 	end
 end
-
 
 mod:hook("HudElementWorldMarkers", "update", make_element_throttle("world_markers_fps"))
 
@@ -141,6 +127,7 @@ mod:hook("HudElementNameplates", "update", function(func, self, dt, t)
 	if not timer then
 		timer = pacing_new()
 		self._ui_throttle_timer = timer
+		return func(self, dt, t)
 	end
 
 	if not mod:is_enabled() or should_bypass_throttling() then
@@ -166,7 +153,8 @@ local function make_panel_throttle(fps_setting_id, stagger)
 	return function(func, self, dt, t, player, ui_renderer)
 		local timer = self._ui_throttle_timer
 		if not timer then
-			local phase = stagger and mod:get("stagger_team_panels") and math.random() / mod:get(fps_setting_id)
+			local fps = mod:get(fps_setting_id) or 30
+			local phase = (fps > 0 and stagger and mod:get("stagger_team_panels")) and (math.random() / fps) or 0
 			timer = pacing_new(phase)
 			self._ui_throttle_timer = timer
 			return func(self, dt, t, player, ui_renderer)
@@ -177,7 +165,13 @@ local function make_panel_throttle(fps_setting_id, stagger)
 			return func(self, dt, t, player, ui_renderer)
 		end
 
-		local due, elapsed = pacing_due(timer, dt, mod:get(fps_setting_id))
+		local target_fps = mod:get(fps_setting_id) or 30
+		if target_fps <= 0 then
+			pacing_reset(timer)
+			return func(self, dt, t, player, ui_renderer)
+		end
+
+		local due, elapsed = pacing_due(timer, dt, target_fps)
 		if due then
 			return func(self, elapsed, t, player, ui_renderer)
 		end
@@ -188,16 +182,18 @@ mod:hook("HudElementTeamPlayerPanel", "_update_player_features", make_panel_thro
 mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", make_panel_throttle("personal_player_panel_fps", false))
 
 local function handle_update_buffs(func, self, t, ui_renderer)
-	local buffs_fps = mod:get("player_buffs_fps")
-	if not mod:is_enabled() or should_bypass_throttling() then
+	local buffs_fps = mod:get("player_buffs_fps") or 10
+	if not mod:is_enabled() or should_bypass_throttling() or buffs_fps <= 0 then
 		return func(self, t, ui_renderer)
 	end
 
 	local buffs_data = self._active_buffs_data
-	for i = 1, #buffs_data do
-		if buffs_data[i].remove then
-			self._ui_throttle_last_t = t
-			return func(self, t, ui_renderer)
+	if buffs_data then
+		for i = 1, #buffs_data do
+			if buffs_data[i].remove then
+				self._ui_throttle_last_t = t
+				return func(self, t, ui_renderer)
+			end
 		end
 	end
 
@@ -212,11 +208,30 @@ end
 
 mod:hook("HudElementPlayerBuffs", "_update_buffs", handle_update_buffs)
 
+local buff_bar_elements = {
+	{ class_name = "HudElementPlayerBuffs" },
+	{ class_name = "HudElementBuffBar" },
+	{ class_name = "HudElementBBMBuffBar", mod_name = "better_buff_management" },
+	{ class_name = "HudElementSbfBuffBar", mod_name = "SimpleBuffFilter" },
+}
+
 local hooked_elements = {
 	HudElementWorldMarkers = true,
 	HudElementNameplates = true,
 	HudElementCombatFeed = true,
 	HudElementPlayerBuffs = true,
+	HudElementTeamPlayerPanel = true,
+	HudElementPersonalPlayerPanel = true,
+}
+
+local protected_elements = {
+	HudElementSmartTagging = true,
+	HudElementCrosshair = true,
+	HudElementDamageIndicator = true,
+	HudElementPlayerWeaponHandler = true,
+	HudElementWieldInfo = true,
+	HudElementEmoteWheel = true,
+	HudElementInteraction = true,
 }
 
 local function hook_buff_bars()
@@ -241,29 +256,39 @@ local function hook_buff_bars()
 	end
 end
 
-local function apply_ui_filter_list()
-	for i = 1, #ui_filter_list do
-		local entry = ui_filter_list[i]
-		local class_name, target_fps
-		if type(entry) == "string" then
-			class_name = entry
-			target_fps = 30
-		elseif type(entry) == "table" then
-			class_name = entry.class_name or entry[1]
-			target_fps = entry.fps or entry.target_fps or entry[2] or 30
-		end
+local function apply_background_hud_throttling()
+	local hud = Managers.ui and (Managers.ui._hud or Managers.ui._spectator_hud)
+	if not hud or not hud._elements_array then return end
 
-		if class_name and not hooked_elements[class_name] then
+	for i = 1, #hud._elements_array do
+		local element = hud._elements_array[i]
+		local class_name = element.__class_name
+		if class_name and not protected_elements[class_name] and not hooked_elements[class_name] then
 			hooked_elements[class_name] = true
-			mod:hook(class_name, "update", make_element_throttle(target_fps))
+			mod:hook(class_name, "update", make_element_throttle("general_hud_fps"))
 		end
 	end
 end
 
 hook_buff_bars()
-apply_ui_filter_list()
+apply_background_hud_throttling()
 
 mod.on_all_mods_loaded = function()
 	hook_buff_bars()
-	apply_ui_filter_list()
+	apply_background_hud_throttling()
 end
+
+mod:hook_safe("UIHud", "_add_element", function(self, definition)
+	local class_name = definition and definition.class_name
+	if class_name and not protected_elements[class_name] and not hooked_elements[class_name] then
+		hooked_elements[class_name] = true
+		mod:hook(class_name, "update", make_element_throttle("general_hud_fps"))
+	end
+end)
+
+mod:hook("UIHud", "init", function(func, self, ...)
+	local r1, r2, r3 = func(self, ...)
+	hook_buff_bars()
+	apply_background_hud_throttling()
+	return r1, r2, r3
+end)

@@ -4,18 +4,22 @@ Throttles UI update rates to improve CPU performance.
 
 [b]General & Controls[/b]
 - Bypass in Menus & Cursor
-- Toggle Throttling Hotkey (Hotkey)
+- Toggle UI Throttle Key (Hotkey)
 
-[b]Frame Rates[/b]
-- Player Buffs Rate (FPS)
-- Teammate Panels Rate (FPS)
+[b]General HUD[/b]
+- General HUD Rate (FPS) (0 = off)
+
+[b]Player & Team[/b]
+- Player Buffs Rate (FPS) (0 = off)
+- Personal Panel Rate (FPS) (0 = off)
+- Teammate Panels Rate (FPS) (0 = off)
 - Stagger Teammate Updates
-- Personal Panel Rate (FPS)
-- World Markers & Nameplates Rate (FPS)
-- Combat Feed Rate (FPS)
 
-[b]Custom Elements[/b]
-- Built-in UI filter list allows throttling any additional HUD elements (vanilla or modded) directly in UIThrottle.lua.
+[b]World & Feed[/b]
+- World Markers & Nameplates Rate (FPS) (0 = off)
+- Combat Feed Rate (FPS) (0 = off)
+
+[i]Setting any slider to 0 completely disables throttling for that category. Pings, crosshairs, damage indicators, interactions, and weapon inputs are always protected and run at full monitor frame rate.[/i]
 
 [b]Links:[/b]
 [url=https://github.com/MaddyMarv/UI-Throttle]Source Code[/url] | [url=https://www.nexusmods.com/profile/indicabunny]Nexus Mods Profile[/url] | [url=https://ko-fi.com/indicabunny]Support Me on Ko-fi[/url]

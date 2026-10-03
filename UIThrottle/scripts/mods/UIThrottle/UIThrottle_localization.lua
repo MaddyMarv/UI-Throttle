@@ -5,19 +5,13 @@ return {
 		en = "UI Throttle",
 	},
 	mod_description = {
-		en = "Reduces CPU overhead by throttling UI update rates with other features to reduce CPU load.",
+		en = "Reduces CPU overhead by throttling individual HUD element update rates without affecting input handling.",
 	},
 	tab_rates = {
 		en = "Frame Rates",
 	},
 	group_rates = {
 		en = "Target Frame Rates",
-	},
-	general_hud_fps = {
-		en = "General HUD Rate (FPS)",
-	},
-	general_hud_fps_description = {
-		en = "Target update rate for crosshair, tactical overlay, and general HUD elements.",
 	},
 	player_buffs_fps = {
 		en = "Player Buffs Rate (FPS)",
@@ -49,6 +43,12 @@ return {
 	world_markers_fps_description = {
 		en = "Target update rate for world markers and player nameplates.",
 	},
+	combat_feed_fps = {
+		en = "Combat Feed Rate (FPS)",
+	},
+	combat_feed_fps_description = {
+		en = "Target update rate for killfeed and pickup notification popups.",
+	},
 	tab_general = {
 		en = "General",
 	},
@@ -66,12 +66,6 @@ return {
 	},
 	toggle_throttle_key_description = {
 		en = "Keybind to quickly toggle all UI throttling on or off.",
-	},
-	show_tick_echo = {
-		en = "Show Debug Tick Indicator",
-	},
-	show_tick_echo_description = {
-		en = "Prints HUD tick updates and elapsed frame timings to chat for performance testing.",
 	},
 	msg_throttle_disabled = {
 		en = "{#color(255,100,100)}[UI Throttle] Throttling disabled{#reset()}",

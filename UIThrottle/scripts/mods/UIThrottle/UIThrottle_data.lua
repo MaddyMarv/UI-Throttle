@@ -25,11 +25,6 @@ return {
 						keybind_type = "function_call",
 						function_name = "toggle_throttle",
 					},
-					{
-						setting_id = "show_tick_echo",
-						type = "checkbox",
-						default_value = false,
-					},
 				},
 			},
 			{
@@ -37,14 +32,6 @@ return {
 				type = "group",
 				tab = mod:localize("tab_rates"),
 				sub_widgets = {
-					{
-						setting_id = "general_hud_fps",
-						type = "numeric",
-						default_value = 30,
-						range = { 10, 60 },
-						decimals_number = 0,
-						step_size_value = 1,
-					},
 					{
 						setting_id = "player_buffs_fps",
 						type = "numeric",
@@ -56,7 +43,7 @@ return {
 					{
 						setting_id = "team_panels_fps",
 						type = "numeric",
-						default_value = 15,
+						default_value = 30,
 						range = { 5, 60 },
 						decimals_number = 0,
 						step_size_value = 1,
@@ -79,6 +66,14 @@ return {
 						type = "numeric",
 						default_value = 60,
 						range = { 15, 120 },
+						decimals_number = 0,
+						step_size_value = 1,
+					},
+					{
+						setting_id = "combat_feed_fps",
+						type = "numeric",
+						default_value = 30,
+						range = { 10, 60 },
 						decimals_number = 0,
 						step_size_value = 1,
 					},

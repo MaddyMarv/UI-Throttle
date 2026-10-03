@@ -36,20 +36,32 @@ local function pacing_due(timer, dt, fps)
 	return true, elapsed
 end
 
-local hud_timer = pacing_new()
-local world_markers_timer = pacing_new()
 local team_panels_timer = pacing_new()
 local personal_panel_timer = pacing_new()
 
-local entire_hud_ticks = 0
-
 local team_robin_index = 0
+
+-- UI Filter List
+-- Add any HUD elements here (vanilla or from other mods) to throttle them directly in code:
+--   "HudElementName",                            -- defaults to 30 FPS
+--   { class_name = "HudElementName", fps = 20 }, -- custom FPS rate
+local ui_filter_list = {
+	-- Add extra HUD elements here to throttle them:
+	-- "HudElementExample",
+	-- { class_name = "HudElementExample", fps = 20 },
+}
+
+-- Modded buff bar classes to throttle with the player buff rate:
+local buff_bar_elements = {
+	{ class_name = "HudElementPlayerBuffs" },
+	{ class_name = "HudElementBuffBar" },
+	{ class_name = "HudElementBBMBuffBar", mod_name = "better_buff_management" },
+	{ class_name = "HudElementSbfBuffBar", mod_name = "SimpleBuffFilter" },
+}
 
 mod._throttle_disabled = false
 
 local function reset_timers()
-	pacing_reset(hud_timer)
-	pacing_reset(world_markers_timer)
 	pacing_reset(team_panels_timer)
 	pacing_reset(personal_panel_timer)
 	team_robin_index = 0
@@ -87,7 +99,8 @@ local function should_bypass_throttling(hud)
 		end
 	end
 
-	if hud and hud.using_input and hud:using_input() then
+	local active_hud = hud or (ui_manager and ui_manager.get_hud and ui_manager:get_hud())
+	if active_hud and active_hud.using_input and active_hud:using_input() then
 		return true
 	end
 
@@ -115,101 +128,70 @@ mod.on_setting_changed = function(setting_id)
 	reset_timers()
 end
 
-mod:hook("UIHud", "update", function(func, self, dt, t, input_service)
-	if not mod:is_enabled() or should_bypass_throttling(self) then
-		pacing_reset(hud_timer)
-		pacing_reset(world_markers_timer)
-		return func(self, dt, t, input_service)
-	end
-
-	local target_fps = mod:get("general_hud_fps") or 30
-	if target_fps <= 0 then
-		pacing_reset(hud_timer)
-		pacing_reset(world_markers_timer)
-		return func(self, dt, t, input_service)
-	end
-
-	local due, elapsed = pacing_due(hud_timer, dt, target_fps)
-
-	world_markers_timer.elapsed = world_markers_timer.elapsed + dt
-	world_markers_timer.debt = world_markers_timer.debt + dt
-
-	if due then
-		entire_hud_ticks = entire_hud_ticks + 1
-		if mod:get("show_tick_echo") then
-			mod:echo(string.format("{#color(100,255,100)}[HUD TICK #%d] (%.1fms){#reset()}", entire_hud_ticks, elapsed * 1000))
+local function make_element_throttle(fps_setting_id_or_number)
+	return function(func, self, dt, t, ui_renderer, render_settings, input_service)
+		local timer = self._ui_throttle_timer
+		if not timer then
+			timer = pacing_new()
+			self._ui_throttle_timer = timer
 		end
 
-		func(self, elapsed, t, input_service)
-		pacing_reset(world_markers_timer)
-	else
-		local wm_fps = mod:get("world_markers_fps") or 60
-		if wm_fps > target_fps then
-			local wm_due, wm_elapsed = pacing_due(world_markers_timer, 0, wm_fps)
+		if not mod:is_enabled() or should_bypass_throttling() then
+			pacing_reset(timer)
+			return func(self, dt, t, ui_renderer, render_settings, input_service)
+		end
 
-			if wm_due then
-				local ui_renderer = self._ui_renderer
-				local render_settings = self._render_settings
-				local visible_elements = self._currently_visible_elements
-				local elements = self._elements
+		local target_fps = type(fps_setting_id_or_number) == "number" and fps_setting_id_or_number or (mod:get(fps_setting_id_or_number) or 60)
+		if target_fps <= 0 then
+			pacing_reset(timer)
+			return func(self, dt, t, ui_renderer, render_settings, input_service)
+		end
 
-				if elements and visible_elements then
-					local default_scale = (render_settings and render_settings.scale) or (RESOLUTION_LOOKUP and RESOLUTION_LOOKUP.scale) or 1
-					if ui_renderer then
-						ui_renderer.scale = default_scale
-						ui_renderer.inverse_scale = 1 / default_scale
-					end
-
-					local wm = elements.HudElementWorldMarkers
-					if wm and visible_elements.HudElementWorldMarkers and wm.update then
-						local applied_scale = false
-						if self._elements_hud_scale_lookup and self._elements_hud_scale_lookup.HudElementWorldMarkers then
-							applied_scale = true
-							self:_apply_hud_scale()
-							if ui_renderer and render_settings then
-								ui_renderer.scale = render_settings.scale
-								ui_renderer.inverse_scale = render_settings.inverse_scale
-							end
-						end
-
-						wm:update(wm_elapsed, t, ui_renderer, render_settings, input_service)
-
-						if applied_scale then
-							self:_abort_hud_scale()
-							if ui_renderer and render_settings then
-								ui_renderer.scale = render_settings.scale
-								ui_renderer.inverse_scale = render_settings.inverse_scale
-							end
-						end
-					end
-
-					local np = elements.HudElementNameplates
-					if np and visible_elements.HudElementNameplates and np.update then
-						local applied_scale = false
-						if self._elements_hud_scale_lookup and self._elements_hud_scale_lookup.HudElementNameplates then
-							applied_scale = true
-							self:_apply_hud_scale()
-							if ui_renderer and render_settings then
-								ui_renderer.scale = render_settings.scale
-								ui_renderer.inverse_scale = render_settings.inverse_scale
-							end
-						end
-
-						np:update(wm_elapsed, t, ui_renderer, render_settings, input_service)
-
-						if applied_scale then
-							self:_abort_hud_scale()
-							if ui_renderer and render_settings then
-								ui_renderer.scale = render_settings.scale
-								ui_renderer.inverse_scale = render_settings.inverse_scale
-							end
-						end
-					end
+		local due, elapsed = pacing_due(timer, dt, target_fps)
+		if due then
+			return func(self, elapsed, t, ui_renderer, render_settings, input_service)
+		else
+			local super_class = self.super
+			if super_class and super_class.update then
+				return super_class.update(self, dt, t, ui_renderer, render_settings, input_service)
+			else
+				local base_class = rawget(_G, "CLASS") and CLASS.HudElementBase
+				if base_class and base_class.update then
+					return base_class.update(self, dt, t, ui_renderer, render_settings, input_service)
 				end
 			end
 		end
 	end
+end
+
+
+mod:hook("HudElementWorldMarkers", "update", make_element_throttle("world_markers_fps"))
+
+mod:hook("HudElementNameplates", "update", function(func, self, dt, t)
+	local timer = self._ui_throttle_timer
+	if not timer then
+		timer = pacing_new()
+		self._ui_throttle_timer = timer
+	end
+
+	if not mod:is_enabled() or should_bypass_throttling() then
+		pacing_reset(timer)
+		return func(self, dt, t)
+	end
+
+	local target_fps = mod:get("world_markers_fps") or 60
+	if target_fps <= 0 then
+		pacing_reset(timer)
+		return func(self, dt, t)
+	end
+
+	local due, elapsed = pacing_due(timer, dt, target_fps)
+	if due then
+		return func(self, elapsed, t)
+	end
 end)
+
+mod:hook("HudElementCombatFeed", "update", make_element_throttle("combat_feed_fps"))
 
 mod:hook("HudElementTeamPanelHandler", "update", function(func, self, dt, t, ui_renderer, render_settings, input_service)
 	if not mod:is_enabled() or should_bypass_throttling() then
@@ -229,8 +211,8 @@ mod:hook("HudElementTeamPanelHandler", "update", function(func, self, dt, t, ui_
 	local personal_fps = mod:get("personal_player_panel_fps") or 30
 	local personal_due, personal_elapsed = pacing_due(personal_panel_timer, dt, personal_fps)
 
-	local team_fps = mod:get("team_panels_fps") or 15
-	local team_due, team_elapsed = pacing_due(team_panels_timer, dt, team_fps)
+	local team_fps = mod:get("team_panels_fps") or 30
+	local team_due, _ = pacing_due(team_panels_timer, dt, team_fps)
 
 	local stagger = mod:get("stagger_team_panels") ~= false
 	local base_class = rawget(_G, "CLASS") and CLASS.HudElementBase
@@ -260,7 +242,16 @@ mod:hook("HudElementTeamPanelHandler", "update", function(func, self, dt, t, ui_
 		if stagger and teammate_count > 1 then
 			team_robin_index = (team_robin_index % teammate_count) + 1
 			local chosen = teammates[team_robin_index]
-			chosen.panel:update(team_elapsed, t, ui_renderer, render_settings, input_service)
+			local panel = chosen.panel
+
+			local panel_last_t = panel._ui_throttle_last_t or (t - dt)
+			local panel_dt = t - panel_last_t
+			if panel_dt <= 0 or panel_dt > 0.5 then
+				panel_dt = dt
+			end
+			panel._ui_throttle_last_t = t
+
+			panel:update(panel_dt, t, ui_renderer, render_settings, input_service)
 
 			if base_class and base_class.update then
 				for i = 1, teammate_count do
@@ -271,7 +262,14 @@ mod:hook("HudElementTeamPanelHandler", "update", function(func, self, dt, t, ui_
 			end
 		else
 			for i = 1, teammate_count do
-				teammates[i].panel:update(team_elapsed, t, ui_renderer, render_settings, input_service)
+				local panel = teammates[i].panel
+				local panel_last_t = panel._ui_throttle_last_t or (t - dt)
+				local panel_dt = t - panel_last_t
+				if panel_dt <= 0 or panel_dt > 0.5 then
+					panel_dt = dt
+				end
+				panel._ui_throttle_last_t = t
+				panel:update(panel_dt, t, ui_renderer, render_settings, input_service)
 			end
 		end
 	elseif teammate_count > 0 then
@@ -314,17 +312,59 @@ end
 
 mod:hook("HudElementPlayerBuffs", "update", handle_buff_update)
 
-local buff_bar_hooked = false
-if rawget(_G, "HudElementBuffBar") or (rawget(_G, "CLASS") and CLASS.HudElementBuffBar) then
-	mod:hook("HudElementBuffBar", "update", handle_buff_update)
-	buff_bar_hooked = true
-end
+local hooked_elements = {
+	HudElementWorldMarkers = true,
+	HudElementNameplates = true,
+	HudElementCombatFeed = true,
+	HudElementTeamPanelHandler = true,
+	HudElementPlayerBuffs = true,
+}
 
-mod.on_all_mods_loaded = function()
-	if not buff_bar_hooked and (rawget(_G, "HudElementBuffBar") or (rawget(_G, "CLASS") and CLASS.HudElementBuffBar)) then
-		mod:hook("HudElementBuffBar", "update", handle_buff_update)
-		buff_bar_hooked = true
+local function hook_buff_bars()
+	for i = 1, #buff_bar_elements do
+		local entry = buff_bar_elements[i]
+		local class_name = entry.class_name or entry
+		local mod_name = entry.mod_name
+
+		if not hooked_elements[class_name] then
+			local should_hook = false
+			if rawget(_G, class_name) or (rawget(_G, "CLASS") and CLASS[class_name]) then
+				should_hook = true
+			elseif mod_name and rawget(_G, "get_mod") and get_mod(mod_name) then
+				should_hook = true
+			end
+
+			if should_hook then
+				hooked_elements[class_name] = true
+				mod:hook(class_name, "update", handle_buff_update)
+			end
+		end
 	end
 end
 
+local function apply_ui_filter_list()
+	for i = 1, #ui_filter_list do
+		local entry = ui_filter_list[i]
+		local class_name, target_fps
+		if type(entry) == "string" then
+			class_name = entry
+			target_fps = 30
+		elseif type(entry) == "table" then
+			class_name = entry.class_name or entry[1]
+			target_fps = entry.fps or entry.target_fps or entry[2] or 30
+		end
 
+		if class_name and not hooked_elements[class_name] then
+			hooked_elements[class_name] = true
+			mod:hook(class_name, "update", make_element_throttle(target_fps))
+		end
+	end
+end
+
+hook_buff_bars()
+apply_ui_filter_list()
+
+mod.on_all_mods_loaded = function()
+	hook_buff_bars()
+	apply_ui_filter_list()
+end

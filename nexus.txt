@@ -1,19 +1,21 @@
-Reduces CPU overhead by throttling UI update rates with other features to reduce CPU load.
+Reduces CPU overhead by throttling individual HUD element update rates without affecting input handling.
 
 [b]Options:[/b]
 
 [b]General & Controls[/b]
 - Bypass in Menus & Cursor
 - Toggle Throttling Hotkey (Hotkey)
-- Show Debug Tick Indicator
 
 [b]Frame Rates[/b]
-- General HUD Rate (FPS)
 - Player Buffs Rate (FPS)
 - Teammate Panels Rate (FPS)
 - Stagger Teammate Updates
 - Personal Panel Rate (FPS)
 - World Markers & Nameplates Rate (FPS)
+- Combat Feed Rate (FPS)
+
+[b]Custom Elements[/b]
+- Built-in UI filter list allows throttling any additional HUD elements (vanilla or modded) directly in UIThrottle.lua.
 
 [b]Links:[/b]
 [url=https://github.com/MaddyMarv/UI-Throttle]Source Code[/url] | [url=https://www.nexusmods.com/profile/indicabunny]Nexus Mods Profile[/url] | [url=https://ko-fi.com/indicabunny]Support Me on Ko-fi[/url]

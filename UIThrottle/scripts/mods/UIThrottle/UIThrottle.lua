@@ -1,21 +1,15 @@
 local mod = get_mod("UIThrottle")
 
--- Add any HUD element class names here to run at 100% full frame rate (never throttled):
-local PROTECTED_ELEMENTS = {
-	"HudElementSmartTagging",
-	"HudElementCrosshair",
-	"HudElementDamageIndicator",
-	"HudElementPlayerWeaponHandler",
-	"HudElementWieldInfo",
-	"HudElementEmoteWheel",
-	"HudElementInteraction",
+-- Elements here run at native frame rate and are never throttled:
+local protected_elements = {
+	HudElementSmartTagging = true,
+	HudElementCrosshair = true,
+	HudElementDamageIndicator = true,
+	HudElementPlayerWeaponHandler = true,
+	HudElementWieldInfo = true,
+	HudElementEmoteWheel = true,
+	HudElementInteraction = true,
 }
-
-local protected_elements = {}
-for k, v in pairs(PROTECTED_ELEMENTS) do
-	if type(k) == "string" then protected_elements[k] = true end
-	if type(v) == "string" then protected_elements[v] = true end
-end
 
 local TOLERANCE = 0.9
 

@@ -142,13 +142,74 @@ mod.toggle_throttle = function()
 	end
 end
 
+local function is_throttle_footprint_key(k)
+	if type(k) ~= "string" then return false end
+	if k == "_ui_throttle_timer" or k == "_ui_throttle_last_t" then return false end
+
+	local lk = k:lower()
+
+	-- Universal throttle/update footprints used across Darktide mods
+	return lk:find("interval") ~= nil
+		or lk:find("throttle") ~= nil
+		or lk:find("poll") ~= nil
+		or lk:find("update_time") ~= nil
+		or lk:find("update_timer") ~= nil
+		or lk:find("last_.*_t") ~= nil
+		or lk:find("last_.*_time") ~= nil
+		or lk:find("next_.*_t") ~= nil
+		or lk:find("_ammo_t") ~= nil
+		or lk:find("displayed_second") ~= nil
+end
+
+local function has_self_throttling_footprint(element, class_name)
+	if not element and not class_name then return false end
+
+	if type(element) == "table" then
+		if element.__ui_throttle_ignore or element._ui_throttle_exempt or element._is_throttled or element.throttled or element.is_throttled then
+			return true
+		end
+
+		for k in pairs(element) do
+			if is_throttle_footprint_key(k) then
+				element.__ui_throttle_ignore = true
+				return true
+			end
+		end
+	end
+
+	if class_name then
+		local class_table = rawget(_G, class_name) or (rawget(_G, "CLASS") and CLASS[class_name])
+		if type(class_table) == "table" then
+			if class_table.__ui_throttle_ignore or class_table._ui_throttle_exempt or class_table._is_throttled or class_table.throttled or class_table.is_throttled then
+				return true
+			end
+
+			for k in pairs(class_table) do
+				if is_throttle_footprint_key(k) then
+					return true
+				end
+			end
+		end
+	end
+
+	return false
+end
+
 local function make_element_throttle(fps_setting_id)
 	return function(func, self, dt, t, ui_renderer, render_settings, input_service)
+		if has_self_throttling_footprint(self) then
+			return func(self, dt, t, ui_renderer, render_settings, input_service)
+		end
+
 		local timer = self._ui_throttle_timer
 		if not timer then
+			local res = func(self, dt, t, ui_renderer, render_settings, input_service)
+			if has_self_throttling_footprint(self) then
+				return res
+			end
 			timer = pacing_new()
 			self._ui_throttle_timer = timer
-			return func(self, dt, t, ui_renderer, render_settings, input_service)
+			return res
 		end
 
 		if not mod:is_enabled() or should_bypass_throttling(t) then
@@ -245,13 +306,21 @@ mod:hook("HudElementCombatFeed", "update", make_element_throttle("combat_feed_fp
 
 local function make_panel_throttle(fps_setting_id, stagger)
 	return function(func, self, dt, t, player, ui_renderer)
+		if has_self_throttling_footprint(self) then
+			return func(self, dt, t, player, ui_renderer)
+		end
+
 		local timer = self._ui_throttle_timer
 		if not timer then
+			local res = func(self, dt, t, player, ui_renderer)
+			if has_self_throttling_footprint(self) then
+				return res
+			end
 			local fps = settings[fps_setting_id] or 30
 			local phase = (fps > 0 and stagger and settings.stagger_team_panels) and (math.random() / fps) or 0
 			timer = pacing_new(phase)
 			self._ui_throttle_timer = timer
-			return func(self, dt, t, player, ui_renderer)
+			return res
 		end
 
 		if not mod:is_enabled() or should_bypass_throttling(t) then
@@ -344,6 +413,10 @@ local function hook_buff_bars()
 	end
 end
 
+local function is_element_throttled_or_exempt(element, class_name)
+	return has_self_throttling_footprint(element, class_name)
+end
+
 local function apply_background_hud_throttling()
 	local hud = Managers.ui and (Managers.ui._hud or Managers.ui._spectator_hud)
 	if not hud or not hud._elements_array then return end
@@ -351,7 +424,7 @@ local function apply_background_hud_throttling()
 	for i = 1, #hud._elements_array do
 		local element = hud._elements_array[i]
 		local class_name = element.__class_name
-		if class_name and not protected_elements[class_name] and not hooked_elements[class_name] then
+		if class_name and not protected_elements[class_name] and not hooked_elements[class_name] and not is_element_throttled_or_exempt(element, class_name) then
 			hooked_elements[class_name] = true
 			mod:hook(class_name, "update", make_element_throttle("general_hud_fps"))
 		end
@@ -369,7 +442,7 @@ end
 
 mod:hook_safe("UIHud", "_add_element", function(self, definition)
 	local class_name = definition and definition.class_name
-	if class_name and not protected_elements[class_name] and not hooked_elements[class_name] then
+	if class_name and not protected_elements[class_name] and not hooked_elements[class_name] and not is_element_throttled_or_exempt(nil, class_name) then
 		hooked_elements[class_name] = true
 		mod:hook(class_name, "update", make_element_throttle("general_hud_fps"))
 	end

@@ -11,9 +11,10 @@ IF you notice a bug on another mod while playing with this mod, please do not re
 
 **There is a protected element list that lets you protect elements that are having issues specifically.**
 
-The lower you put the fps the more issues that will pop up so be careful! And test what's best for you. 
+The lower you put the fps the more issues that will pop up so be careful! And test what's best for you.
 
-**Options:**
+<details>
+<summary><b>Mod Settings / Commands</b></summary>
 
 **General & Controls**
 - Bypass in Menus & Cursor
@@ -31,5 +32,6 @@ The lower you put the fps the more issues that will pop up so be careful! And te
 **World & Feed**
 - World Markers & Nameplates Rate (FPS) (0 = off)
 - Combat Feed Rate (FPS) (0 = off)
+</details>
 
 - **Links:** [Source Code](https://github.com/MaddyMarv/UI-Throttle) | [Nexus Mods Profile](https://www.nexusmods.com/profile/indicabunny) | [Support Me on Ko-fi](https://ko-fi.com/indicabunny)

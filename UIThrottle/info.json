@@ -4,11 +4,8 @@
     "version": "1.0",
     "homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/1386",
     "source": "https://github.com/MaddyMarv/UI-Throttle",
+    "funding": { "kofi": "https://ko-fi.com/indicabunny" },
     "description": "Throttles UI update rates to improve CPU performance.",
-    "order": {
-        "require": [],
-        "this_before": [],
-        "this_after": []
-    },
+    "dependencies": { "required": [], "self_after": [], "self_before": [] },
     "localization": {}
 }

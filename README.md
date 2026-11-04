@@ -9,7 +9,7 @@ This mod can be quite unstable and should be used as a performance tool from adv
 
 IF you notice a bug on another mod while playing with this mod, please do not report it unless you can 100% confirm it has that bug without UI throttle installed. This mod is highly prone to bugs, and it would drive a Modder crazy to have that reported to them without understanding why it's happening :P. 
 
-**There is a protected element list that lets you protect elements that are having issues specifically.**
+**There is a protected element list at the top of `UIThrottle.lua` that you can edit to exempt elements that are having issues.**
 
 The lower you put the fps the more issues that will pop up so be careful! And test what's best for you.
 

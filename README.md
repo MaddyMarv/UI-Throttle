@@ -3,8 +3,6 @@
 
 Throttles UI update rates to improve CPU performance.
 
-Darktide's data collection for UI elements runs on every single frame you have, Which can cause massive amounts of CPU usage and frame loss as a result. This mod limits how often mods and Darktide's vanilla elements ask for data while keeping the animations the same. 
-
 This is a performance tool for people who want to squeeze out as many frames as possible, especially if your CPU is the bottleneck and you run a lot of HUD mods.
 
 **How it works (the simple version):**

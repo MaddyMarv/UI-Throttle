@@ -11,6 +11,7 @@ local protected_elements = {
 	HudElementInteraction = true,
 	HudElementTacticalOverlay = true,
 	HudElementPrologueTutorialInfoBox = true,
+	HudCanvas = true,
 }
 
 local TOLERANCE = 0.9
@@ -143,32 +144,29 @@ mod.toggle_throttle = function()
 	end
 end
 
-local function is_throttle_footprint_key(k)
-	if type(k) ~= "string" or k:find("^_ui_throttle_") then return false end
-
-	local lk = k:lower()
-
-	return lk:find("interval", 1, true) ~= nil
-		or lk:find("throttle", 1, true) ~= nil
-		or lk:find("poll", 1, true) ~= nil
-		or lk:find("update_time", 1, true) ~= nil
-		or lk:find("update_timer", 1, true) ~= nil
-		or lk:find("^_?last_[%w_]*_t$") ~= nil
-		or lk:find("^_?last_[%w_]*_time$") ~= nil
-		or lk:find("^_?next_[%w_]*_t$") ~= nil
-		or lk:find("_ammo_t", 1, true) ~= nil
-		or lk:find("displayed_second", 1, true) ~= nil
+local function is_throttle_field(k, v)
+	local tv = type(v)
+	if tv == "number" then
+		local lk = k:lower()
+		return lk:find("throttle", 1, true) ~= nil
+			or lk:find("interval", 1, true) ~= nil
+			or lk:find("^_?next_[%w_]*_t$") ~= nil
+	elseif tv == "table" then
+		return type(rawget(v, "elapsed")) == "number"
+			and (type(rawget(v, "debt")) == "number" or type(rawget(v, "accumulator")) == "number" or type(rawget(v, "interval")) == "number")
+	end
+	return false
 end
 
-local function has_self_throttling_footprint(tbl)
-	if type(tbl) ~= "table" then return false end
+local function has_self_throttling_footprint(element)
+	if type(element) ~= "table" then return false end
 
-	if tbl.__ui_throttle_ignore or tbl._ui_throttle_exempt or tbl._is_throttled or tbl.throttled or tbl.is_throttled then
+	if element.__ui_throttle_ignore or element._ui_throttle_exempt or element._is_throttled or element.throttled or element.is_throttled then
 		return true
 	end
 
-	for k in pairs(tbl) do
-		if is_throttle_footprint_key(k) then
+	for k, v in pairs(element) do
+		if type(k) == "string" and not k:find("^_ui_throttle_") and is_throttle_field(k, v) then
 			return true
 		end
 	end
@@ -395,7 +393,7 @@ local function wrap_element(element)
 		return
 	end
 
-	if not cls.update or cls.update == base_update or rawget(element, "update") or has_self_throttling_footprint(cls) then return end
+	if not cls.update or cls.update == base_update or rawget(element, "update") or has_self_throttling_footprint(element) then return end
 
 	element.update = function(self, dt, t, ui_renderer, render_settings, input_service)
 		if not mod:is_enabled() then

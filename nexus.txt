@@ -4,9 +4,19 @@ Darktide's data collection for UI elements runs on every single frame you have, 
 
 This mod can be quite unstable and should be used as a performance tool from advanced users who want to squeeze out as many frames as possible.
 
+[b]How it works (the simple version):[/b]
+- Every HUD element (team panels, buff bars, markers, modded HUDs, etc.) normally refreshes its info every single frame. At 144 fps that's 144 times a second, way more than you can actually see.
+- UI Throttle puts each element on a schedule instead (30 times a second by default, markers at 60) and skips the frames in between.
+- Animations still move every frame so everything stays smooth, they just get new info less often.
+- Anything that needs your input right away (tagging, crosshair, interacting, the tactical overlay, etc.) is never throttled.
+- If a mod already throttles itself (like HUD Studio), UI Throttle notices and leaves it alone so it doesn't get slowed down twice.
+- It turns itself off while you're in menus, chat, or have your cursor out.
+
 IF you notice a bug on another mod while playing with this mod, please do not report it unless you can 100% confirm it has that bug without UI throttle installed. This mod is highly prone to bugs, and it would drive a Modder crazy to have that reported to them without understanding why it's happening :P. 
 
 [b]There is a protected element list at the top of UIThrottle.lua that you can edit to exempt elements that are having issues.[/b]
+
+[b]For mod authors:[/b] if your HUD element already throttles itself, just add [font=Courier New]self._ui_throttle_exempt = true[/font] in its init (or put it on the class) and UI Throttle will skip it.
 
 The lower you put the fps the more issues that will pop up so be careful! And test what's best for you.
 

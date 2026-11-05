@@ -380,7 +380,7 @@ local function wrap_element(element)
 
 	local class_name = element.__class_name
 	local cls = getmetatable(element)
-	if not cls or protected_elements[class_name] or dedicated_elements[class_name] then return end
+	if not cls or protected_elements[class_name] or dedicated_elements[class_name] or has_self_throttling_footprint(element) then return end
 
 	if cls._update_buffs then
 		if rawget(element, "_update_buffs") then return end
@@ -393,7 +393,7 @@ local function wrap_element(element)
 		return
 	end
 
-	if not cls.update or cls.update == base_update or rawget(element, "update") or has_self_throttling_footprint(element) then return end
+	if not cls.update or cls.update == base_update or rawget(element, "update") then return end
 
 	element.update = function(self, dt, t, ui_renderer, render_settings, input_service)
 		if not mod:is_enabled() then

@@ -12,7 +12,7 @@ This is a performance tool for people who want to squeeze out as many frames as 
 
 Modded HUDs, and vanilla gauges like stamina, dodges and peril, run at the General HUD rate unless they opt out. That includes timing cues like a charge-ready indicator. If one feels a little late, raise General HUD Rate or set it to 0.
 
-If something from another mod looks off while using this, try it with UI Throttle turned off (the toggle hotkey works for this) before reporting it to that mod's author :P If UI Throttle is the cause, let me know so I can fix it! Typing [font=Courier New]/uithrottle_status[/font] in chat shows what UI Throttle is doing with each HUD element, and pasting that into your report helps a lot.
+If something from another mod looks off while using this, try it with UI Throttle turned off (the toggle hotkey works for this) before reporting it to that mod's author :P If UI Throttle is the cause, let me know so I can fix it! Typing [font=Courier New]/uithrottle_status[/font] in chat shows what UI Throttle is doing with each HUD element, and prints the entire list to the console log.
 
 [b]There is a protected element list at the top of UIThrottle.lua that you can edit to exempt elements that are having issues.[/b]
 

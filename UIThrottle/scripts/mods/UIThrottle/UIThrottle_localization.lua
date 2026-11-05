@@ -85,4 +85,64 @@ return {
 	combat_feed_fps_description = {
 		en = "Target update rate for killfeed and pickup notification popups (0 = off).",
 	},
+	cmd_status_description = {
+		en = "Shows how UI Throttle handles each HUD element. Add part of an element name to list only matches, e.g. /uithrottle_status peril",
+	},
+	status_no_hud = {
+		en = "UI Throttle: no HUD is active right now.",
+	},
+	status_no_match = {
+		en = "UI Throttle: no HUD element name contains \"%s\".",
+	},
+	status_header = {
+		en = "UI Throttle: General HUD rate %s.",
+	},
+	status_paused = {
+		en = "UI Throttle: throttling is paused by the toggle hotkey.",
+	},
+	status_summary = {
+		en = "%s on General HUD Rate, %s with a rate override, %s exempt, %s protected, %s untouched.",
+	},
+	status_log_hint = {
+		en = "Full list written to the console log. Add part of a name to list matches here, e.g. /uithrottle_status peril",
+	},
+	status_rate = {
+		en = "%s Hz",
+	},
+	status_rate_off = {
+		en = "off (full rate)",
+	},
+	status_general = {
+		en = "general rate, %s",
+	},
+	status_general_pending = {
+		en = "general rate, %s (not updated yet)",
+	},
+	status_exempt_flag = {
+		en = "exempt (mod flag %s)",
+	},
+	status_exempt_detected = {
+		en = "exempt (own timer detected: %s)",
+	},
+	status_protected = {
+		en = "protected (never throttled)",
+	},
+	status_dedicated = {
+		en = "rate override: %s = %s",
+	},
+	status_dedicated_panels = {
+		en = "rate override: %s = %s, %s = %s",
+	},
+	status_buffs = {
+		en = "rate override: %s = %s (buff polling only)",
+	},
+	status_untouched = {
+		en = "untouched (no update of its own)",
+	},
+	status_overridden = {
+		en = "untouched (another mod replaced its update)",
+	},
+	status_not_wrapped = {
+		en = "not handled yet",
+	},
 }

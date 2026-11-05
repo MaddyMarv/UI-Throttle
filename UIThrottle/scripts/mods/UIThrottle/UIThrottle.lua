@@ -158,20 +158,29 @@ local function is_throttle_field(k, v)
 	return false
 end
 
-local function has_self_throttling_footprint(element)
-	if type(element) ~= "table" then return false end
+local exempt_flags = { "_ui_throttle_exempt", "__ui_throttle_ignore", "_is_throttled", "throttled", "is_throttled" }
+local exempt_flag_lookup = {}
+for i = 1, #exempt_flags do
+	exempt_flag_lookup[exempt_flags[i]] = true
+end
 
-	if element.__ui_throttle_ignore or element._ui_throttle_exempt or element._is_throttled or element.throttled or element.is_throttled then
-		return true
+local function self_throttle_reason(element)
+	if type(element) ~= "table" then return nil end
+
+	for i = 1, #exempt_flags do
+		local flag = exempt_flags[i]
+		if element[flag] then
+			return flag
+		end
 	end
 
 	for k, v in pairs(element) do
 		if type(k) == "string" and not k:find("^_ui_throttle_") and is_throttle_field(k, v) then
-			return true
+			return k
 		end
 	end
 
-	return false
+	return nil
 end
 
 local function run_due_update(func, self, dt, elapsed, t, ui_renderer, render_settings, input_service)
@@ -185,8 +194,10 @@ local function make_element_throttle(fps_setting_id)
 		local timer = self._ui_throttle_timer
 		if timer == nil then
 			local res = func(self, dt, t, ui_renderer, render_settings, input_service)
-			if has_self_throttling_footprint(self) then
+			local reason = self_throttle_reason(self)
+			if reason then
 				self._ui_throttle_timer = false
+				self._ui_throttle_reason = reason
 			else
 				self._ui_throttle_timer = pacing_new()
 			end
@@ -305,7 +316,7 @@ local function make_panel_throttle(fps_setting_id, stagger)
 		local timer = self._ui_throttle_timer
 		if timer == nil then
 			local res = func(self, dt, t, player, ui_renderer)
-			if has_self_throttling_footprint(self) then
+			if self_throttle_reason(self) then
 				self._ui_throttle_timer = false
 			else
 				local fps = settings[fps_setting_id] or 30
@@ -366,10 +377,10 @@ local function handle_update_buffs(func, self, t, ui_renderer)
 end
 
 local dedicated_elements = {
-	HudElementWorldMarkers = true,
-	HudElementNameplates = true,
-	HudElementCombatFeed = true,
-	HudElementTeamPanelHandler = true,
+	HudElementWorldMarkers = "world_markers_fps",
+	HudElementNameplates = "world_markers_fps",
+	HudElementCombatFeed = "combat_feed_fps",
+	HudElementTeamPanelHandler = "team_panels_fps",
 }
 
 local general_throttle = make_element_throttle("general_hud_fps")
@@ -380,10 +391,31 @@ local function wrap_element(element)
 
 	local class_name = element.__class_name
 	local cls = getmetatable(element)
-	if not cls or protected_elements[class_name] or dedicated_elements[class_name] or has_self_throttling_footprint(element) then return end
+	if not cls then return end
+
+	if protected_elements[class_name] then
+		element._ui_throttle_mode = "protected"
+		return
+	end
+
+	if dedicated_elements[class_name] then
+		element._ui_throttle_mode = "dedicated"
+		return
+	end
+
+	local reason = self_throttle_reason(element)
+	if reason then
+		element._ui_throttle_mode = "exempt"
+		element._ui_throttle_reason = reason
+		return
+	end
 
 	if cls._update_buffs then
-		if rawget(element, "_update_buffs") then return end
+		if rawget(element, "_update_buffs") then
+			element._ui_throttle_mode = "overridden"
+			return
+		end
+		element._ui_throttle_mode = "buffs"
 		element._update_buffs = function(self, t, ui_renderer)
 			if not mod:is_enabled() then
 				return cls._update_buffs(self, t, ui_renderer)
@@ -393,8 +425,17 @@ local function wrap_element(element)
 		return
 	end
 
-	if not cls.update or cls.update == base_update or rawget(element, "update") then return end
+	if not cls.update or cls.update == base_update then
+		element._ui_throttle_mode = "untouched"
+		return
+	end
 
+	if rawget(element, "update") then
+		element._ui_throttle_mode = "overridden"
+		return
+	end
+
+	element._ui_throttle_mode = "general"
 	element.update = function(self, dt, t, ui_renderer, render_settings, input_service)
 		if not mod:is_enabled() then
 			return cls.update(self, dt, t, ui_renderer, render_settings, input_service)
@@ -433,4 +474,100 @@ mod:hook_safe("UIHud", "_add_element", function(_, definition, elements)
 	if class_name and elements then
 		wrap_element(elements[class_name])
 	end
+end)
+
+local function rate_text(fps)
+	if fps and fps > 0 then
+		return mod:localize("status_rate", fps)
+	end
+	return mod:localize("status_rate_off")
+end
+
+local function exempt_text(reason)
+	if exempt_flag_lookup[reason] then
+		return mod:localize("status_exempt_flag", reason)
+	end
+	return mod:localize("status_exempt_detected", tostring(reason))
+end
+
+local function element_status(element)
+	if rawget(element, "_ui_throttle_timer") == false then
+		return "exempt", exempt_text(rawget(element, "_ui_throttle_reason"))
+	end
+
+	local mode = rawget(element, "_ui_throttle_mode")
+	if mode == "general" then
+		local key = rawget(element, "_ui_throttle_timer") and "status_general" or "status_general_pending"
+		return "general", mod:localize(key, rate_text(settings.general_hud_fps))
+	elseif mode == "exempt" then
+		return "exempt", exempt_text(rawget(element, "_ui_throttle_reason"))
+	elseif mode == "protected" then
+		return "protected", mod:localize("status_protected")
+	elseif mode == "dedicated" then
+		local class_name = element.__class_name
+		if class_name == "HudElementTeamPanelHandler" then
+			return "dedicated", mod:localize("status_dedicated_panels",
+				mod:localize("team_panels_fps"), rate_text(settings.team_panels_fps),
+				mod:localize("personal_player_panel_fps"), rate_text(settings.personal_player_panel_fps))
+		end
+		local setting_id = dedicated_elements[class_name]
+		return "dedicated", mod:localize("status_dedicated", mod:localize(setting_id), rate_text(settings[setting_id]))
+	elseif mode == "buffs" then
+		return "dedicated", mod:localize("status_buffs", mod:localize("player_buffs_fps"), rate_text(settings.player_buffs_fps))
+	elseif mode == "overridden" then
+		return "untouched", mod:localize("status_overridden")
+	elseif mode == "untouched" then
+		return "untouched", mod:localize("status_untouched")
+	end
+	return "untouched", mod:localize("status_not_wrapped")
+end
+
+local function add_status_lines(hud, filter, lines, counts)
+	local elements = hud and hud._elements_array
+	if not elements then return end
+	for i = 1, #elements do
+		local element = elements[i]
+		local name = tostring(element.__class_name)
+		if not filter or name:lower():find(filter, 1, true) then
+			local bucket, text = element_status(element)
+			counts[bucket] = counts[bucket] + 1
+			lines[#lines + 1] = name .. ": " .. text
+		end
+	end
+end
+
+mod:command("uithrottle_status", mod:localize("cmd_status_description"), function(filter)
+	local ui_manager = Managers.ui
+	local hud = ui_manager and ui_manager._hud
+	local spectator_hud = ui_manager and ui_manager._spectator_hud
+	if not hud and not spectator_hud then
+		mod:echo(mod:localize("status_no_hud"))
+		return
+	end
+
+	filter = filter and filter:lower()
+	local lines = {}
+	local counts = { general = 0, exempt = 0, protected = 0, dedicated = 0, untouched = 0 }
+	add_status_lines(hud, filter, lines, counts)
+	add_status_lines(spectator_hud, filter, lines, counts)
+
+	if filter then
+		if #lines == 0 then
+			mod:echo(mod:localize("status_no_match", filter))
+		end
+		for i = 1, #lines do
+			mod:echo(lines[i])
+		end
+		return
+	end
+
+	mod:echo(mod:localize("status_header", rate_text(settings.general_hud_fps)))
+	if mod._throttle_disabled then
+		mod:echo(mod:localize("status_paused"))
+	end
+	mod:echo(mod:localize("status_summary", counts.general, counts.dedicated, counts.exempt, counts.protected, counts.untouched))
+	for i = 1, #lines do
+		mod:info(lines[i])
+	end
+	mod:echo(mod:localize("status_log_hint"))
 end)

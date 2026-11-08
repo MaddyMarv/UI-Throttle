@@ -231,6 +231,26 @@ local function make_element_throttle(fps_setting_id)
 	end
 end
 
+local companion_marker_types = { "nameplate_companion", "nameplate_companion_hub" }
+
+local function refresh_companion_markers(self, ui_renderer, t)
+	local markers_by_type = self._markers_by_type
+	if not markers_by_type then return end
+	for n = 1, #companion_marker_types do
+		local markers = markers_by_type[companion_marker_types[n]]
+		if markers then
+			for i = 1, #markers do
+				local marker = markers[i]
+				local template = marker.template
+				local update_function = template and template.update_function
+				if update_function and marker.update then
+					update_function(self, ui_renderer, marker.widget, marker, template, 0, t)
+				end
+			end
+		end
+	end
+end
+
 mod:hook("HudElementWorldMarkers", "update", function(func, self, dt, t, ui_renderer, render_settings, input_service)
 	local timer = self._ui_throttle_timer
 	if not timer then
@@ -265,6 +285,8 @@ mod:hook("HudElementWorldMarkers", "update", function(func, self, dt, t, ui_rend
 				end
 			end
 		end
+
+		refresh_companion_markers(self, ui_renderer, t)
 
 		local super_class = self.super
 		if super_class and super_class.update then

@@ -390,12 +390,50 @@ local function make_panel_throttle(fps_setting_id, stagger)
 	end
 end
 
-mod:hook("HudElementTeamPlayerPanel", "_update_player_features", make_panel_throttle("team_panels_fps", true))
-mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", make_panel_throttle("personal_player_panel_fps", false))
-mod:hook("HudElementTeamPlayerPanelHub", "_update_player_features", make_panel_throttle("team_panels_fps", true))
-mod:hook("HudElementPersonalPlayerPanelHub", "_update_player_features", make_panel_throttle("personal_player_panel_fps", false))
+local team_panel_throttle = make_panel_throttle("team_panels_fps", true)
+local personal_panel_throttle = make_panel_throttle("personal_player_panel_fps", false)
+
+local panel_throttles = {
+	HudElementTeamPlayerPanel = team_panel_throttle,
+	HudElementTeamPlayerPanelHub = team_panel_throttle,
+	HudElementPersonalPlayerPanel = personal_panel_throttle,
+	HudElementPersonalPlayerPanelHub = personal_panel_throttle,
+}
+
+for class_name, throttle in pairs(panel_throttles) do
+	mod:hook(class_name, "_update_player_features", function(func, self, dt, t, player, ui_renderer)
+		if rawget(self, "_ui_throttle_panel_wrapped") then
+			return func(self, dt, t, player, ui_renderer)
+		end
+		return throttle(func, self, dt, t, player, ui_renderer)
+	end)
+end
+
+local function wrap_panel(panel)
+	local throttle = panel_throttles[panel.__class_name]
+	local cls = getmetatable(panel)
+	if not throttle or not cls or rawget(panel, "_update_player_features") then
+		panel._ui_throttle_panel_wrapped = false
+		return
+	end
+	panel._ui_throttle_panel_wrapped = true
+	panel._update_player_features = function(self, dt, t, player, ui_renderer)
+		if not mod:is_enabled() then
+			return cls._update_player_features(self, dt, t, player, ui_renderer)
+		end
+		return throttle(cls._update_player_features, self, dt, t, player, ui_renderer)
+	end
+end
 
 local function handle_panel_handler_update(func, self, dt, t, ui_renderer, render_settings, input_service)
+	local panels = self._player_panels_array
+	for i = 1, #panels do
+		local panel = panels[i].panel
+		if rawget(panel, "_ui_throttle_panel_wrapped") == nil then
+			wrap_panel(panel)
+		end
+	end
+
 	local timer = self._ui_throttle_timer
 	if not timer then
 		self._ui_throttle_timer = pacing_new()
@@ -412,7 +450,6 @@ local function handle_panel_handler_update(func, self, dt, t, ui_renderer, rende
 		return func(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
-	local panels = self._player_panels_array
 	local num_panels = #panels
 	for i = 1, num_panels do
 		if panels[i].player.__deleted then

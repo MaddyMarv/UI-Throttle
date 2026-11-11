@@ -74,10 +74,16 @@ return {
 		en = "World & Feed",
 	},
 	world_markers_fps = {
-		en = "World Markers & Nameplates Rate (FPS)",
+		en = "World Markers Rate (FPS)",
 	},
 	world_markers_fps_description = {
-		en = "Target update rate for world markers and player nameplates (0 = off).",
+		en = "Target update rate for world marker info such as health bars and icons (0 = off). It can't update faster than the position rate below.",
+	},
+	world_markers_position_fps = {
+		en = "World Marker Position Rate (FPS)",
+	},
+	world_markers_position_fps_description = {
+		en = "Target update rate for where world markers sit on screen (0 = off). Below 60, markers can lag behind when you move the camera.",
 	},
 	combat_feed_fps = {
 		en = "Combat Feed Rate (FPS)",
@@ -101,7 +107,7 @@ return {
 		en = "UI Throttle: throttling is paused by the toggle hotkey.",
 	},
 	status_summary = {
-		en = "%s on General HUD Rate, %s with a rate override, %s exempt, %s protected, %s untouched.",
+		en = "%s on General HUD Rate, %s on their own sliders, %s exempt, %s protected, %s untouched.",
 	},
 	status_log_hint = {
 		en = "Full list written to the console log. Add part of a name to list matches here, e.g. /uithrottle_status peril",
@@ -114,6 +120,9 @@ return {
 	},
 	status_general = {
 		en = "general rate, %s",
+	},
+	status_idle = {
+		en = "general rate while closed, %s (full rate while open)",
 	},
 	status_general_pending = {
 		en = "general rate, %s (not updated yet)",
@@ -128,13 +137,13 @@ return {
 		en = "protected (never throttled)",
 	},
 	status_dedicated = {
-		en = "rate override: %s = %s",
+		en = "own slider: %s = %s",
 	},
 	status_dedicated_panels = {
-		en = "rate override: %s = %s, %s = %s",
+		en = "own sliders: %s = %s, %s = %s",
 	},
 	status_buffs = {
-		en = "rate override: %s = %s (buff polling only)",
+		en = "own slider: %s = %s (buff polling only)",
 	},
 	status_untouched = {
 		en = "untouched (no update of its own)",

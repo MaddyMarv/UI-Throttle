@@ -1,5 +1,8 @@
 local mod = get_mod("UIThrottle")
 
+local HudElementBase = require("scripts/ui/hud/elements/hud_element_base")
+local base_update = HudElementBase.update
+
 local protected_elements = {
 	HudElementSmartTagging = true,
 	HudElementCrosshair = true,
@@ -9,8 +12,8 @@ local protected_elements = {
 	HudElementWieldInfo = true,
 	HudElementEmoteWheel = true,
 	HudElementInteraction = true,
-	HudElementTacticalOverlay = true,
 	HudElementPrologueTutorialInfoBox = true,
+	HudElementNameplates = true,
 	HudCanvas = true,
 }
 
@@ -23,7 +26,8 @@ local settings = {
 	personal_player_panel_fps = 30,
 	team_panels_fps = 30,
 	stagger_team_panels = true,
-	world_markers_fps = 60,
+	world_markers_fps = 30,
+	world_markers_position_fps = 60,
 	combat_feed_fps = 30,
 }
 
@@ -223,13 +227,48 @@ local function make_element_throttle(fps_setting_id)
 		if due then
 			return run_due_update(func, self, dt, elapsed, t, ui_renderer, render_settings, input_service)
 		else
-			local super_class = self.super
-			if super_class and super_class.update then
-				return super_class.update(self, dt, t, ui_renderer, render_settings, input_service)
+			if self._ui_throttle_is_base then
+				return HudElementBase.update(self, dt, t, ui_renderer, render_settings, input_service)
 			end
 		end
 	end
 end
+
+local marker_logic_skip = false
+local marker_logic_dt = nil
+
+local function wrap_marker_template(name, template)
+	local current = template.update_function
+	if not current or current == template._ui_throttle_update then
+		return
+	end
+	if string.find(name, "nameplate", 1, true) then
+		template._ui_throttle_update = current
+		return
+	end
+	local wrapper = function(parent, ui_renderer, widget, marker, marker_template, dt, t)
+		if marker_logic_skip then
+			return
+		end
+		return current(parent, ui_renderer, widget, marker, marker_template, marker_logic_dt or dt, t)
+	end
+	template.update_function = wrapper
+	template._ui_throttle_update = wrapper
+end
+
+local function wrap_marker_templates(templates)
+	for name, template in pairs(templates) do
+		wrap_marker_template(name, template)
+	end
+end
+
+mod:hook("HudElementWorldMarkers", "_template_by_type", function(func, self, marker_type, clone)
+	local template = func(self, marker_type, clone)
+	if template then
+		wrap_marker_template(marker_type, template)
+	end
+	return template
+end)
 
 local companion_marker_types = { "nameplate_companion", "nameplate_companion_hub" }
 
@@ -251,84 +290,65 @@ local function refresh_companion_markers(self, ui_renderer, t)
 	end
 end
 
+local function remove_dead_markers(self)
+	local markers = self._markers
+	if not markers then return end
+	local alive_table = rawget(_G, "ALIVE")
+	for i = #markers, 1, -1 do
+		local marker = markers[i]
+		local unit = marker.unit
+		if marker.remove or (unit and alive_table and not alive_table[unit]) then
+			self:_unregister_marker(marker)
+		end
+	end
+end
+
 mod:hook("HudElementWorldMarkers", "update", function(func, self, dt, t, ui_renderer, render_settings, input_service)
-	local timer = self._ui_throttle_timer
-	if not timer then
-		timer = pacing_new()
-		self._ui_throttle_timer = timer
+	marker_logic_skip = false
+	marker_logic_dt = nil
+
+	local position_timer = self._ui_throttle_timer
+	if not position_timer then
+		self._ui_throttle_timer = pacing_new()
+		self._ui_throttle_logic_timer = pacing_new()
 		return func(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
-	if should_bypass_throttling(t) then
-		pacing_reset(timer)
+	local logic_timer = self._ui_throttle_logic_timer
+	local logic_fps = settings.world_markers_fps or 30
+	local position_fps = settings.world_markers_position_fps or 60
+	if (logic_fps <= 0 and position_fps <= 0) or should_bypass_throttling(t) then
+		pacing_reset(position_timer)
+		pacing_reset(logic_timer)
+		self._ui_throttle_logic_pending = nil
 		return func(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
-	local target_fps = settings.world_markers_fps or 60
-	if target_fps <= 0 then
-		pacing_reset(timer)
-		return func(self, dt, t, ui_renderer, render_settings, input_service)
+	local logic_due, logic_elapsed = pacing_due(logic_timer, dt, logic_fps)
+	if logic_due then
+		self._ui_throttle_logic_pending = (self._ui_throttle_logic_pending or 0) + logic_elapsed
 	end
 
-	local due, elapsed = pacing_due(timer, dt, target_fps)
-	if due then
-		return run_due_update(func, self, dt, elapsed, t, ui_renderer, render_settings, input_service)
-	else
-		local markers = self._markers
-		if markers then
-			local alive_table = rawget(_G, "ALIVE")
-			for i = #markers, 1, -1 do
-				local marker = markers[i]
-				local unit = marker.unit
-				if marker.remove or (unit and alive_table and not alive_table[unit]) then
-					self:_unregister_marker(marker)
-				end
-			end
-		end
-
+	local position_due, position_elapsed = pacing_due(position_timer, dt, position_fps)
+	if not position_due then
+		remove_dead_markers(self)
 		refresh_companion_markers(self, ui_renderer, t)
-
-		local super_class = self.super
-		if super_class and super_class.update then
-			return super_class.update(self, dt, t, ui_renderer, render_settings, input_service)
-		end
-	end
-end)
-
-local base_update = require("scripts/ui/hud/elements/hud_element_base").update
-
-mod:hook("HudElementBase", "update", function(func, self, dt, ...)
-	local base_dt = rawget(self, "_ui_throttle_base_dt")
-	if base_dt then
-		self._ui_throttle_base_dt = nil
-		return func(self, base_dt, ...)
-	end
-	return func(self, dt, ...)
-end)
-
-mod:hook("HudElementNameplates", "update", function(func, self, dt, t)
-	local timer = self._ui_throttle_timer
-	if not timer then
-		timer = pacing_new()
-		self._ui_throttle_timer = timer
-		return func(self, dt, t)
+		return HudElementBase.update(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
-	if should_bypass_throttling(t) then
-		pacing_reset(timer)
-		return func(self, dt, t)
+	local pending = self._ui_throttle_logic_pending
+	if pending then
+		wrap_marker_templates(self._marker_templates)
+		marker_logic_dt = pending
+		self._ui_throttle_logic_pending = nil
+	else
+		marker_logic_skip = true
 	end
 
-	local target_fps = settings.world_markers_fps or 60
-	if target_fps <= 0 then
-		pacing_reset(timer)
-		return func(self, dt, t)
-	end
+	run_due_update(func, self, dt, position_elapsed, t, ui_renderer, render_settings, input_service)
 
-	local due, elapsed = pacing_due(timer, dt, target_fps)
-	if due then
-		return func(self, elapsed, t)
-	end
+	marker_logic_skip = false
+	marker_logic_dt = nil
 end)
 
 mod:hook("HudElementCombatFeed", "update", make_element_throttle("combat_feed_fps"))
@@ -372,6 +392,51 @@ end
 
 mod:hook("HudElementTeamPlayerPanel", "_update_player_features", make_panel_throttle("team_panels_fps", true))
 mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", make_panel_throttle("personal_player_panel_fps", false))
+mod:hook("HudElementTeamPlayerPanelHub", "_update_player_features", make_panel_throttle("team_panels_fps", true))
+mod:hook("HudElementPersonalPlayerPanelHub", "_update_player_features", make_panel_throttle("personal_player_panel_fps", false))
+
+local function handle_panel_handler_update(func, self, dt, t, ui_renderer, render_settings, input_service)
+	local timer = self._ui_throttle_timer
+	if not timer then
+		self._ui_throttle_timer = pacing_new()
+		return func(self, dt, t, ui_renderer, render_settings, input_service)
+	end
+
+	local target_fps = settings.team_panels_fps or 30
+	if target_fps <= 0 or should_bypass_throttling(t) then
+		pacing_reset(timer)
+		return func(self, dt, t, ui_renderer, render_settings, input_service)
+	end
+
+	if pacing_due(timer, dt, target_fps) then
+		return func(self, dt, t, ui_renderer, render_settings, input_service)
+	end
+
+	local panels = self._player_panels_array
+	local num_panels = #panels
+	for i = 1, num_panels do
+		if panels[i].player.__deleted then
+			return func(self, dt, t, ui_renderer, render_settings, input_service)
+		end
+	end
+
+	HudElementBase.update(self, dt, t, ui_renderer, render_settings, input_service)
+	for i = 1, num_panels do
+		panels[i].panel:update(dt, t, ui_renderer, render_settings, input_service)
+	end
+end
+
+local function tactical_overlay_busy(self)
+	if self._active or (self._alpha_multiplier or 0) > 0 then
+		return true
+	end
+	local input_service = Managers.input:get_input_service("Ingame")
+	return input_service ~= nil and input_service:get("tactical_overlay_hold") or false
+end
+
+local idle_throttled_elements = {
+	HudElementTacticalOverlay = tactical_overlay_busy,
+}
 
 local function handle_update_buffs(func, self, t, ui_renderer)
 	local buffs_fps = settings.player_buffs_fps or 30
@@ -400,12 +465,29 @@ end
 
 local dedicated_elements = {
 	HudElementWorldMarkers = "world_markers_fps",
-	HudElementNameplates = "world_markers_fps",
 	HudElementCombatFeed = "combat_feed_fps",
 	HudElementTeamPanelHandler = "team_panels_fps",
 }
 
 local general_throttle = make_element_throttle("general_hud_fps")
+
+local function is_base_descendant(cls)
+	while cls do
+		if cls == HudElementBase then
+			return true
+		end
+		cls = rawget(cls, "super")
+	end
+	return false
+end
+
+local function wrap_animations(element, cls)
+	local update_animations = cls._update_animations
+	if not update_animations or rawget(element, "_update_animations") then return end
+	element._update_animations = function(self, dt, t)
+		return update_animations(self, rawget(self, "_ui_throttle_base_dt") or dt, t)
+	end
+end
 
 local function wrap_element(element)
 	if type(element) ~= "table" or rawget(element, "_ui_throttle_wrapped") then return end
@@ -415,6 +497,8 @@ local function wrap_element(element)
 	local cls = getmetatable(element)
 	if not cls then return end
 
+	element._ui_throttle_is_base = is_base_descendant(cls)
+
 	if protected_elements[class_name] then
 		element._ui_throttle_mode = "protected"
 		return
@@ -422,6 +506,16 @@ local function wrap_element(element)
 
 	if dedicated_elements[class_name] then
 		element._ui_throttle_mode = "dedicated"
+		if class_name ~= "HudElementTeamPanelHandler" then
+			wrap_animations(element, cls)
+		elseif not rawget(element, "update") then
+			element.update = function(self, dt, t, ui_renderer, render_settings, input_service)
+				if not mod:is_enabled() then
+					return cls.update(self, dt, t, ui_renderer, render_settings, input_service)
+				end
+				return handle_panel_handler_update(cls.update, self, dt, t, ui_renderer, render_settings, input_service)
+			end
+		end
 		return
 	end
 
@@ -457,7 +551,28 @@ local function wrap_element(element)
 		return
 	end
 
+	local is_busy = idle_throttled_elements[class_name]
+	if is_busy then
+		element._ui_throttle_mode = "idle"
+		wrap_animations(element, cls)
+		element.update = function(self, dt, t, ui_renderer, render_settings, input_service)
+			if not mod:is_enabled() then
+				return cls.update(self, dt, t, ui_renderer, render_settings, input_service)
+			end
+			if is_busy(self) then
+				local timer = self._ui_throttle_timer
+				if timer then
+					pacing_reset(timer)
+				end
+				return cls.update(self, dt, t, ui_renderer, render_settings, input_service)
+			end
+			return general_throttle(cls.update, self, dt, t, ui_renderer, render_settings, input_service)
+		end
+		return
+	end
+
 	element._ui_throttle_mode = "general"
+	wrap_animations(element, cls)
 	element.update = function(self, dt, t, ui_renderer, render_settings, input_service)
 		if not mod:is_enabled() then
 			return cls.update(self, dt, t, ui_renderer, render_settings, input_service)
@@ -521,6 +636,8 @@ local function element_status(element)
 	if mode == "general" then
 		local key = rawget(element, "_ui_throttle_timer") and "status_general" or "status_general_pending"
 		return "general", mod:localize(key, rate_text(settings.general_hud_fps))
+	elseif mode == "idle" then
+		return "general", mod:localize("status_idle", rate_text(settings.general_hud_fps))
 	elseif mode == "exempt" then
 		return "exempt", exempt_text(rawget(element, "_ui_throttle_reason"))
 	elseif mode == "protected" then
@@ -531,6 +648,11 @@ local function element_status(element)
 			return "dedicated", mod:localize("status_dedicated_panels",
 				mod:localize("team_panels_fps"), rate_text(settings.team_panels_fps),
 				mod:localize("personal_player_panel_fps"), rate_text(settings.personal_player_panel_fps))
+		end
+		if class_name == "HudElementWorldMarkers" then
+			return "dedicated", mod:localize("status_dedicated_panels",
+				mod:localize("world_markers_fps"), rate_text(settings.world_markers_fps),
+				mod:localize("world_markers_position_fps"), rate_text(settings.world_markers_position_fps))
 		end
 		local setting_id = dedicated_elements[class_name]
 		return "dedicated", mod:localize("status_dedicated", mod:localize(setting_id), rate_text(settings[setting_id]))

@@ -7,7 +7,7 @@ This is a performance tool for people who want to squeeze out as many frames as 
 
 **How it works (the simple version):**
 - Every HUD element (team panels, buff bars, markers, modded HUDs, etc.) normally refreshes its info every single frame. At 144 fps that's 144 times a second, way more than you can actually see.
-- UI Throttle puts each element on a schedule instead (30 times a second by default, markers at 60) and skips the frames in between.
+- UI Throttle puts each element on a schedule instead (30 times a second by default) and skips the frames in between.
 - Animations still move every frame so everything stays smooth, they just get new info less often.
 - Anything that needs your input right away (tagging, crosshair, interacting, the tactical overlay, etc.) is never throttled.
 - If a mod opts out or already throttles itself (like HUD Studio), UI Throttle leaves it alone so it doesn't get slowed down twice.
@@ -40,7 +40,7 @@ end)
 ```
 </details>
 
-The lower you set the rates the choppier things can look, so test what feels best for you. Markers under 60 can start to lag behind when you move the camera.
+The lower you set the rates the choppier things can look, so test what feels best for you.
 
 <details>
 <summary><b>Mod Settings / Commands</b></summary>
@@ -59,7 +59,8 @@ The lower you set the rates the choppier things can look, so test what feels bes
 - Stagger Teammate Updates
 
 **World & Feed**
-- World Markers & Nameplates Rate (FPS) (0 = off)
+- World Markers Rate (FPS) (0 = off)
+- World Marker Position Rate (FPS) (0 = off)
 - Combat Feed Rate (FPS) (0 = off)
 
 **Commands**

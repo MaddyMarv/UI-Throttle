@@ -1,6 +1,6 @@
 return {
 	run = function()
-		fassert(rawget(_G, "new_mod"), "`UIThrottle` mod must be lower than DMF in load order.")
+		fassert(rawget(_G, "new_mod"), "`UIThrottle` encountered an error loading the Darktide Mod Framework.")
 
 		new_mod("UIThrottle", {
 			mod_script       = "UIThrottle/scripts/mods/UIThrottle/UIThrottle",

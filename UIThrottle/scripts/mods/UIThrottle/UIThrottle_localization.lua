@@ -98,7 +98,7 @@ return {
 		en = "UI Throttle: no HUD is active right now.",
 	},
 	status_no_match = {
-		en = "UI Throttle: no HUD element name contains \"%s\".",
+		en = 'UI Throttle: no HUD element name contains "%s".',
 	},
 	status_header = {
 		en = "UI Throttle: General HUD rate %s.",

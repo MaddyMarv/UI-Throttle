@@ -67,4 +67,4 @@ The lower you set the rates the choppier things can look, so test what feels bes
 - `/uithrottle_status` - Shows how UI Throttle handles each HUD element (summary in chat, full list in the console log). Add part of a name to list only matches, e.g. `/uithrottle_status peril`.
 </details>
 
-- **Links:** [Source Code](https://github.com/MaddyMarv/UI-Throttle) | [Nexus Mods Profile](https://www.nexusmods.com/profile/indicabunny) | [Support Me on Ko-fi](https://ko-fi.com/indicabunny)
+🔗 **Links:** [Source Code](https://github.com/MaddyMarv/UI-Throttle) | [Nexus Mods Profile](https://www.nexusmods.com/profile/indicabunny) | [Support Me on Ko-fi](https://ko-fi.com/indicabunny)

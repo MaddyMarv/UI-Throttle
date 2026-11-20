@@ -157,7 +157,11 @@ local function is_throttle_field(k, v)
 			or lk:find("^_?next_[%w_]*_t$") ~= nil
 	elseif tv == "table" then
 		return type(rawget(v, "elapsed")) == "number"
-			and (type(rawget(v, "debt")) == "number" or type(rawget(v, "accumulator")) == "number" or type(rawget(v, "interval")) == "number")
+			and (
+				type(rawget(v, "debt")) == "number"
+				or type(rawget(v, "accumulator")) == "number"
+				or type(rawget(v, "interval")) == "number"
+			)
 	end
 	return false
 end
@@ -169,7 +173,9 @@ for i = 1, #exempt_flags do
 end
 
 local function self_throttle_reason(element)
-	if type(element) ~= "table" then return nil end
+	if type(element) ~= "table" then
+		return nil
+	end
 
 	for i = 1, #exempt_flags do
 		local flag = exempt_flags[i]
@@ -274,7 +280,9 @@ local companion_marker_types = { "nameplate_companion", "nameplate_companion_hub
 
 local function refresh_companion_markers(self, ui_renderer, t)
 	local markers_by_type = self._markers_by_type
-	if not markers_by_type then return end
+	if not markers_by_type then
+		return
+	end
 	for n = 1, #companion_marker_types do
 		local markers = markers_by_type[companion_marker_types[n]]
 		if markers then
@@ -292,7 +300,9 @@ end
 
 local function remove_dead_markers(self)
 	local markers = self._markers
-	if not markers then return end
+	if not markers then
+		return
+	end
 	local alive_table = rawget(_G, "ALIVE")
 	for i = #markers, 1, -1 do
 		local marker = markers[i]
@@ -520,19 +530,25 @@ end
 
 local function wrap_animations(element, cls)
 	local update_animations = cls._update_animations
-	if not update_animations or rawget(element, "_update_animations") then return end
+	if not update_animations or rawget(element, "_update_animations") then
+		return
+	end
 	element._update_animations = function(self, dt, t)
 		return update_animations(self, rawget(self, "_ui_throttle_base_dt") or dt, t)
 	end
 end
 
 local function wrap_element(element)
-	if type(element) ~= "table" or rawget(element, "_ui_throttle_wrapped") then return end
+	if type(element) ~= "table" or rawget(element, "_ui_throttle_wrapped") then
+		return
+	end
 	element._ui_throttle_wrapped = true
 
 	local class_name = element.__class_name
 	local cls = getmetatable(element)
-	if not cls then return end
+	if not cls then
+		return
+	end
 
 	element._ui_throttle_is_base = is_base_descendant(cls)
 
@@ -620,7 +636,9 @@ end
 
 local function wrap_hud(hud)
 	local elements = hud and hud._elements_array
-	if not elements then return end
+	if not elements then
+		return
+	end
 	for i = 1, #elements do
 		wrap_element(elements[i])
 	end
@@ -628,7 +646,9 @@ end
 
 local function wrap_existing_huds()
 	local ui_manager = Managers.ui
-	if not ui_manager then return end
+	if not ui_manager then
+		return
+	end
 	wrap_hud(ui_manager._hud)
 	wrap_hud(ui_manager._spectator_hud)
 end
@@ -682,19 +702,30 @@ local function element_status(element)
 	elseif mode == "dedicated" then
 		local class_name = element.__class_name
 		if class_name == "HudElementTeamPanelHandler" then
-			return "dedicated", mod:localize("status_dedicated_panels",
-				mod:localize("team_panels_fps"), rate_text(settings.team_panels_fps),
-				mod:localize("personal_player_panel_fps"), rate_text(settings.personal_player_panel_fps))
+			return "dedicated",
+				mod:localize(
+					"status_dedicated_panels",
+					mod:localize("team_panels_fps"),
+					rate_text(settings.team_panels_fps),
+					mod:localize("personal_player_panel_fps"),
+					rate_text(settings.personal_player_panel_fps)
+				)
 		end
 		if class_name == "HudElementWorldMarkers" then
-			return "dedicated", mod:localize("status_dedicated_panels",
-				mod:localize("world_markers_fps"), rate_text(settings.world_markers_fps),
-				mod:localize("world_markers_position_fps"), rate_text(settings.world_markers_position_fps))
+			return "dedicated",
+				mod:localize(
+					"status_dedicated_panels",
+					mod:localize("world_markers_fps"),
+					rate_text(settings.world_markers_fps),
+					mod:localize("world_markers_position_fps"),
+					rate_text(settings.world_markers_position_fps)
+				)
 		end
 		local setting_id = dedicated_elements[class_name]
 		return "dedicated", mod:localize("status_dedicated", mod:localize(setting_id), rate_text(settings[setting_id]))
 	elseif mode == "buffs" then
-		return "dedicated", mod:localize("status_buffs", mod:localize("player_buffs_fps"), rate_text(settings.player_buffs_fps))
+		return "dedicated",
+			mod:localize("status_buffs", mod:localize("player_buffs_fps"), rate_text(settings.player_buffs_fps))
 	elseif mode == "overridden" then
 		return "untouched", mod:localize("status_overridden")
 	elseif mode == "untouched" then
@@ -705,7 +736,9 @@ end
 
 local function add_status_lines(hud, filter, lines, counts)
 	local elements = hud and hud._elements_array
-	if not elements then return end
+	if not elements then
+		return
+	end
 	for i = 1, #elements do
 		local element = elements[i]
 		local name = tostring(element.__class_name)
@@ -746,7 +779,16 @@ mod:command("uithrottle_status", mod:localize("cmd_status_description"), functio
 	if mod._throttle_disabled then
 		mod:echo(mod:localize("status_paused"))
 	end
-	mod:echo(mod:localize("status_summary", counts.general, counts.dedicated, counts.exempt, counts.protected, counts.untouched))
+	mod:echo(
+		mod:localize(
+			"status_summary",
+			counts.general,
+			counts.dedicated,
+			counts.exempt,
+			counts.protected,
+			counts.untouched
+		)
+	)
 	for i = 1, #lines do
 		mod:info(lines[i])
 	end

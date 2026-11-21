@@ -1,5 +1,3 @@
-local mod = get_mod("UIThrottle")
-
 return {
 	mod_name = {
 		en = "UI Throttle",

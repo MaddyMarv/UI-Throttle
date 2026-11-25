@@ -1,7 +1,7 @@
 ### [UI Throttle](https://www.nexusmods.com/warhammer40kdarktide/mods/1386)
 <img width="863" height="863" alt="image" src="https://github.com/user-attachments/assets/d33c89bb-b258-4f1a-8f04-d7491f04022c" />
 
-Throttles UI update rates to improve CPU performance.
+Reduces CPU overhead by throttling background HUD elements while keeping inputs and crosshairs at full frame rate.
 
 This is a performance tool for people who want to squeeze out as many frames as possible, especially if your CPU is the bottleneck and you run a lot of HUD mods.
 
@@ -45,25 +45,21 @@ The lower you set the rates the choppier things can look, so test what feels bes
 <details>
 <summary><b>Mod Settings / Commands</b></summary>
 
-**General & Controls**
+**General**
 - Bypass in Menus & Cursor
-- Toggle UI Throttle Key (Hotkey)
+- Toggle UI Throttle (Hotkey)
 
-**General HUD**
+**Frame Rates**
 - General HUD Rate (FPS) (0 = off)
-
-**Player & Team**
 - Player Buffs Rate (FPS) (0 = off)
 - Personal Panel Rate (FPS) (0 = off)
 - Teammate Panels Rate (FPS) (0 = off)
 - Stagger Teammate Updates
-
-**World & Feed**
 - World Markers Rate (FPS) (0 = off)
 - World Marker Position Rate (FPS) (0 = off)
 - Combat Feed Rate (FPS) (0 = off)
 
-**Commands**
+**Commands:**
 - `/uithrottle_status` - Shows how UI Throttle handles each HUD element (summary in chat, full list in the console log). Add part of a name to list only matches, e.g. `/uithrottle_status peril`.
 </details>
 

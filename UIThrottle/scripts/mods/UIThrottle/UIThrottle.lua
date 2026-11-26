@@ -48,25 +48,37 @@ mod.on_setting_changed = function(setting_id)
 	end
 end
 
+local GOLDEN_RATIO = 0.6180339887
+local last_phase = 0
+
+local function next_phase()
+	last_phase = (last_phase + GOLDEN_RATIO) % 1
+	return last_phase
+end
+
 local function pacing_new(phase)
-	phase = phase or 0
-	return { debt = phase, elapsed = 0, phase = phase }
+	return { debt = 0, elapsed = 0, phase = phase or 0, fps = false }
 end
 
 local function pacing_reset(timer)
-	timer.debt = timer.phase
+	timer.fps = false
 	timer.elapsed = 0
 end
 
 local function pacing_due(timer, dt, fps)
 	local elapsed = timer.elapsed + dt
 	if fps <= 0 then
-		timer.debt = 0
+		timer.fps = false
 		timer.elapsed = 0
 		return true, elapsed
 	end
 	local interval = 1 / fps
-	local debt = timer.debt + dt
+	local debt = timer.debt
+	if timer.fps ~= fps then
+		timer.fps = fps
+		debt = timer.phase * interval
+	end
+	debt = debt + dt
 	if debt < interval * TOLERANCE then
 		timer.debt = debt
 		timer.elapsed = elapsed
@@ -74,9 +86,7 @@ local function pacing_due(timer, dt, fps)
 	end
 	debt = debt - interval
 	if debt > interval then
-		debt = interval
-	elseif debt < 0 then
-		debt = 0
+		debt = debt % interval
 	end
 	timer.debt = debt
 	timer.elapsed = 0
@@ -209,7 +219,7 @@ local function make_element_throttle(fps_setting_id)
 				self._ui_throttle_timer = false
 				self._ui_throttle_reason = reason
 			else
-				self._ui_throttle_timer = pacing_new()
+				self._ui_throttle_timer = pacing_new(next_phase())
 			end
 			return res
 		end
@@ -319,8 +329,8 @@ mod:hook("HudElementWorldMarkers", "update", function(func, self, dt, t, ui_rend
 
 	local position_timer = self._ui_throttle_timer
 	if not position_timer then
-		self._ui_throttle_timer = pacing_new()
-		self._ui_throttle_logic_timer = pacing_new()
+		self._ui_throttle_timer = pacing_new(next_phase())
+		self._ui_throttle_logic_timer = pacing_new(next_phase())
 		return func(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
@@ -371,8 +381,7 @@ local function make_panel_throttle(fps_setting_id, stagger)
 			if self_throttle_reason(self) then
 				self._ui_throttle_timer = false
 			else
-				local fps = settings[fps_setting_id] or 30
-				local phase = (fps > 0 and stagger and settings.stagger_team_panels) and (math.random() / fps) or 0
+				local phase = (not stagger or settings.stagger_team_panels) and next_phase() or 0
 				self._ui_throttle_timer = pacing_new(phase)
 			end
 			return res
@@ -446,7 +455,7 @@ local function handle_panel_handler_update(func, self, dt, t, ui_renderer, rende
 
 	local timer = self._ui_throttle_timer
 	if not timer then
-		self._ui_throttle_timer = pacing_new()
+		self._ui_throttle_timer = pacing_new(next_phase())
 		return func(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
@@ -486,8 +495,22 @@ local idle_throttled_elements = {
 }
 
 local function handle_update_buffs(func, self, t, ui_renderer)
+	local last_t = self._ui_throttle_last_t
+	self._ui_throttle_last_t = t
+
+	local timer = self._ui_throttle_timer
+	if not timer then
+		timer = pacing_new(next_phase())
+		self._ui_throttle_timer = timer
+	end
+
 	local buffs_fps = settings.player_buffs_fps or 30
-	if should_bypass_throttling(t) or buffs_fps <= 0 then
+	if not last_t or buffs_fps <= 0 or should_bypass_throttling(t) then
+		pacing_reset(timer)
+		return func(self, t, ui_renderer)
+	end
+
+	if pacing_due(timer, t - last_t, buffs_fps) then
 		return func(self, t, ui_renderer)
 	end
 
@@ -495,19 +518,10 @@ local function handle_update_buffs(func, self, t, ui_renderer)
 	if buffs_data then
 		for i = 1, #buffs_data do
 			if buffs_data[i].remove then
-				self._ui_throttle_last_t = t
 				return func(self, t, ui_renderer)
 			end
 		end
 	end
-
-	local last_t = self._ui_throttle_last_t
-	if last_t and t - last_t < TOLERANCE / buffs_fps then
-		return
-	end
-
-	self._ui_throttle_last_t = t
-	return func(self, t, ui_renderer)
 end
 
 local dedicated_elements = {

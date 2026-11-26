@@ -1,7 +1,10 @@
 local mod = get_mod("UIThrottle")
 
 local HudElementBase = require("scripts/ui/hud/elements/hud_element_base")
+local HudElementWorldMarkersSettings =
+	require("scripts/ui/hud/elements/world_markers/hud_element_world_markers_settings")
 local base_update = HudElementBase.update
+local RAYCAST_FRAME_DELAY = HudElementWorldMarkersSettings.raycasts_frame_delay
 
 local protected_elements = {
 	HudElementSmartTagging = true,
@@ -344,6 +347,9 @@ mod:hook("HudElementWorldMarkers", "update", function(func, self, dt, t, ui_rend
 		return func(self, dt, t, ui_renderer, render_settings, input_service)
 	end
 
+	local raycast_frames = (self._ui_throttle_raycast_frames or 0) + 1
+	self._ui_throttle_raycast_frames = raycast_frames
+
 	local logic_due, logic_elapsed = pacing_due(logic_timer, dt, logic_fps)
 	if logic_due then
 		self._ui_throttle_logic_pending = (self._ui_throttle_logic_pending or 0) + logic_elapsed
@@ -363,6 +369,13 @@ mod:hook("HudElementWorldMarkers", "update", function(func, self, dt, t, ui_rend
 		self._ui_throttle_logic_pending = nil
 	else
 		marker_logic_skip = true
+	end
+
+	if raycast_frames >= RAYCAST_FRAME_DELAY then
+		self._raycast_frame_counter = 0
+		self._ui_throttle_raycast_frames = 0
+	else
+		self._raycast_frame_counter = 1
 	end
 
 	run_due_update(func, self, dt, position_elapsed, t, ui_renderer, render_settings, input_service)
